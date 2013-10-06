@@ -8,7 +8,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import spray.json._
 import scala.util.{Failure, Success}
-import com.typesafe.sbt.jslint.JslintEngine.LintResult
+import com.typesafe.jslint.JslintEngine
 
 /**
  * The sbt plugin plumbing around the JslintEngine
@@ -38,19 +38,21 @@ object Plugin extends sbt.Plugin {
     val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
   }
 
+  private val jsLintEngine = JslintEngine()
+
   private val engineStateAttrKey = AttributeKey[ActorRef]("engine-state")
 
   override val globalSettings: Seq[Setting[_]] = Seq(
     onLoad in Global := (onLoad in Global).value andThen {
       state: State =>
-        val engineState = JslintEngine.start()
+        val engineState = jsLintEngine.start()
         state.put(engineStateAttrKey, engineState)
     },
 
     onUnload in Global := (onUnload in Global).value andThen {
       state: State =>
         val engineState = state.get(engineStateAttrKey)
-        engineState.foreach(JslintEngine.stop(_))
+        engineState.foreach(jsLintEngine.stop(_))
         state.remove(engineStateAttrKey)
     }
   )
@@ -66,7 +68,7 @@ object Plugin extends sbt.Plugin {
     (engineState: ActorRef, sources: Seq[File], s: TaskStreams) =>
       s.log.info(s"JavaScript linting on ${sources.size} source(s)")
 
-      val resultBatches: Seq[Future[Seq[LintResult]]] =
+      val resultBatches: Seq[Future[Seq[JsArray]]] =
         try {
           // Declares the maximum number of parallel lints we wish to perform against the engine.
           // FIXME: This should be configurable in future particularly for situations where
@@ -83,12 +85,7 @@ object Plugin extends sbt.Plugin {
           for {
             results <- allResults
             result <- results
-            //if !result.success
-          } {
-            println(s">>>> Result = ${result.errors}")
-            //logErrors(s.log, result.errors)
-            // FIXME: How should I stop sbt if there are failures?
-          }
+          } logErrors(s.log, result)
         case Failure(t) => s.log.error(s"Failed linting: $t")
       }
   }
@@ -96,14 +93,14 @@ object Plugin extends sbt.Plugin {
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
-  private def lintForSources(engineState: ActorRef, sources: Seq[File]): Future[Seq[LintResult]] = {
-    JslintEngine.beginLint(engineState, JsObject()).flatMap[Seq[LintResult]] {
+  private def lintForSources(engineState: ActorRef, sources: Seq[File]): Future[Seq[JsArray]] = {
+    jsLintEngine.beginLint(engineState).flatMap[Seq[JsArray]] {
       lintState =>
         val results = sources.map {
           source =>
-            val lintResult = JslintEngine.lint(lintState, source)
+            val lintResult = jsLintEngine.lint(lintState, source, JsObject())
             lintResult.onComplete {
-              case _ => JslintEngine.endLint(lintState)
+              case _ => jsLintEngine.endLint(lintState)
             }
             lintResult
         }
@@ -111,8 +108,8 @@ object Plugin extends sbt.Plugin {
     }
   }
 
-  private def logErrors(log: Logger, jslintResult: JsValue): Unit = {
-    // FIXME: This needs writing.
-    log.error(jslintResult.toString())
+  private def logErrors(log: Logger, jslintErrors: JsArray): Unit = {
+    jslintErrors.elements.map(e => log.error(e.toString()))
+
   }
 }
