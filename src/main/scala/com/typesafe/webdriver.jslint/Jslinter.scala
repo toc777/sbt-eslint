@@ -16,8 +16,7 @@ import scala.StringBuilder
 import scala.Some
 
 /**
- * This is the main service that performs the linting functionality of the plugin. The service holds the notion of
- * a lifecycle and will start and stop the related webdriver service accordingly. Linting is of course performed
+ * This is the main service that performs the linting functionality of the plugin.  Linting is performed
  * using the webdriver service. There is no dependency on sbt and so there is the potential for this to be factored
  * out into its own library and used with other build tools such as Gradle or Maven.
  */
