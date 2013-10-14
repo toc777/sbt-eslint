@@ -1,4 +1,4 @@
-package com.typesafe.sbt.jslint
+package com.typesafe.jslint.sbt
 
 import sbt.Keys._
 import sbt._
@@ -8,69 +8,29 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import spray.json._
 import scala.util.{Failure, Success}
-import com.typesafe.jslint.JslintEngine
+import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
+import com.typesafe.webdriver.sbt.WebDriverPlugin
 
 /**
- * The sbt plugin plumbing around the JslintEngine
+ * The WebDriver sbt plugin plumbing around the JslintEngine
  */
-object Plugin extends sbt.Plugin {
+object Plugin extends WebDriverPlugin {
 
-  // FIXME: These things should be defined outside of this plugin
-
-  object WebdriverKeys {
-    val JavaScript = config("js")
-    val jsSource = SettingKey[File]("js-source", "The main source directory for JavaScript.")
-    val parallelism = SettingKey[Int]("parallelism", "The number of parallel tasks for the webdriver host. Defaults to the # of available processors + 1 to keep things busy.")
-    val reporter = TaskKey[LoggerReporter]("reporter", "The reporter to use for conveying processing results.")
-  }
-
-  import WebdriverKeys._
-
-  def webdriverSettings = Seq(
-    jsSource in JavaScript := (sourceDirectory in Compile).value / "js",
-    parallelism in JavaScript := java.lang.Runtime.getRuntime.availableProcessors() + 1,
-    reporter in JavaScript := new LoggerReporter(5, streams.value.log),
-    includeFilter in JavaScript := GlobFilter("*.js"),
-    sources in JavaScript <<= (jsSource in JavaScript, includeFilter in JavaScript, excludeFilter in JavaScript) map {
-      (sourceDirectory, includeFilter, excludeFilter) => (sourceDirectory * (includeFilter -- excludeFilter)).get
-    }
-  )
-
+  import WebDriverKeys._
 
   object JslintKeys {
-    val engineState = TaskKey[ActorRef]("engine-state", "An actor representing the state of the jslint engine.")
     val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
+    // TODO: Define the jslint keys and pass then on to the jslinter.
   }
 
-  private val jsLintEngine = JslintEngine()
-
-  private val engineStateAttrKey = AttributeKey[ActorRef]("engine-state")
-
-  override val globalSettings: Seq[Setting[_]] = Seq(
-    onLoad in Global := (onLoad in Global).value andThen {
-      state: State =>
-        val engineState = jsLintEngine.start()
-        state.put(engineStateAttrKey, engineState)
-    },
-
-    onUnload in Global := (onUnload in Global).value andThen {
-      state: State =>
-        val engineState = state.get(engineStateAttrKey)
-        engineState.foreach(jsLintEngine.stop)
-        state.remove(engineStateAttrKey)
-    }
-  )
-
-  def jslintSettings = webdriverSettings ++ Seq(
-    JslintKeys.engineState <<= engineStateTask,
+  def jslintSettings = webDriverSettings ++ Seq(
     JslintKeys.jslint <<= jslintTask
   )
 
-  def engineStateTask = state map (_.get(engineStateAttrKey).get)
-
+  // TODO: This can be abstracted further so that source batches can be determined generally.
   private def jslintTask = (
-    JslintKeys.engineState,
+    browser in JavaScript,
     parallelism in JavaScript,
     sources in JavaScript,
     streams,
@@ -97,18 +57,21 @@ object Plugin extends sbt.Plugin {
       }
   }
 
+
+  private val jslinter = Jslinter()
+
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
   private def lintForSources(engineState: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
-    jsLintEngine.beginLint(engineState).flatMap[Seq[(File, JsArray)]] {
+    jslinter.beginLint(engineState).flatMap[Seq[(File, JsArray)]] {
       lintState =>
         val results = sources.map {
           source =>
-            val lintResult = jsLintEngine.lint(lintState, source, JsObject())
+            val lintResult = jslinter.lint(lintState, source, JsObject())
               .map(result => (source, result))
             lintResult.onComplete {
-              case _ => jsLintEngine.endLint(lintState)
+              case _ => jslinter.endLint(lintState)
             }
             lintResult
         }

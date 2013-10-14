@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.Specification
 import org.webjars.WebJarAssetLocator
-import com.typesafe.jslint.JslintEngine
+import com.typesafe.jslint.Jslinter
 import akka.util.Timeout
 import scala.concurrent.duration._
 import org.specs2.time.NoTimeConversions
@@ -19,24 +19,20 @@ import scala.util.Success
 @RunWith(classOf[JUnitRunner])
 class JslintEngineSpec extends Specification with NoTimeConversions {
 
-  val jslintSourceStream = JslintEngine.getClass.getClassLoader.getResourceAsStream(
+  val jslintSourceStream = Jslinter.getClass.getClassLoader.getResourceAsStream(
     new WebJarAssetLocator().getFullPath("jslint.js")
   )
 
-  "the jslint engine" should {
+  "the jslinter" should {
     "receive source and options" in new TestActorSystem {
       implicit val timeout = Timeout(5.seconds)
-      val engine = new JslintEngine(
-        system,
-        timeout,
-        jslintSourceStream
-      )
+      val jslinter = new Jslinter(jslintSourceStream)
 
       val lintState = TestActorRef[StubbedSessionActor]
       val fileToLint = new File(this.getClass.getResource("some.js").toURI)
       val options = JsObject()
 
-      val futureResult: Future[JsArray] = engine.lint(lintState, fileToLint, options)
+      val futureResult: Future[JsArray] = jslinter.lint(lintState, fileToLint, options)
 
       val Success(result: JsArray) = futureResult.value.get
 

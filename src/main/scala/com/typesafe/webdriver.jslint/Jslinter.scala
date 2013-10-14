@@ -1,13 +1,12 @@
 package com.typesafe.jslint
 
-import akka.actor.{PoisonPill, ActorRef, ActorSystem}
+import akka.actor.{PoisonPill, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
-import com.typesafe.webdriver.{Session, LocalBrowser, PhantomJs}
+import com.typesafe.webdriver.{Session, LocalBrowser}
 import java.io._
 import scala.concurrent.Future
 import spray.json._
@@ -22,10 +21,7 @@ import scala.Some
  * using the webdriver service. There is no dependency on sbt and so there is the potential for this to be factored
  * out into its own library and used with other build tools such as Gradle or Maven.
  */
-class JslintEngine(system: ActorSystem, timeout: Timeout, jslintSourceStream: InputStream) {
-
-  implicit private val implicitSystem = system
-  implicit private val implicitTimeout = timeout
+class Jslinter(jslintSourceStream: InputStream) {
 
   private val jslintSource = buildFromString(jslintSourceStream, new StringBuilder) {
     (builder, s) =>
@@ -34,21 +30,11 @@ class JslintEngine(system: ActorSystem, timeout: Timeout, jslintSourceStream: In
   }.toString()
 
   /**
-   * Start the engine - a potentially costly exercise that should be minimised.
-   * @return The engine's state.
-   */
-  def start(): ActorRef = {
-    val browser = system.actorOf(PhantomJs.props(), "localBrowser")
-    browser ! LocalBrowser.Startup
-    browser
-  }
-
-  /**
    * Declare the start of a sequence of linting to be done.
    * @param engineState the engine state.
    * @return a future of a state to be used for the linting.
    */
-  def beginLint(engineState: ActorRef): Future[ActorRef] = {
+  def beginLint(engineState: ActorRef)(implicit timeout: Timeout): Future[ActorRef] = {
     (engineState ? LocalBrowser.CreateSession).mapTo[ActorRef]
   }
 
@@ -68,7 +54,7 @@ class JslintEngine(system: ActorSystem, timeout: Timeout, jslintSourceStream: In
    *         c         : The third detail
    *         d         : The fourth detail
    */
-  def lint(lintState: ActorRef, fileToLint: File, options: JsObject): Future[JsArray] = {
+  def lint(lintState: ActorRef, fileToLint: File, options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
     val targetJs = s"""|$jslintSource
                        |JSLINT(arguments[0], arguments[1]);
                        |return JSLINT.errors;
@@ -89,14 +75,6 @@ class JslintEngine(system: ActorSystem, timeout: Timeout, jslintSourceStream: In
    */
   def endLint(lintState: ActorRef): Unit = {
     lintState ! PoisonPill
-  }
-
-  /**
-   * Stop the engine.
-   * @param engineState the engine's state.
-   */
-  def stop(engineState: ActorRef): Unit = {
-    engineState ! PoisonPill
   }
 
   /*
@@ -122,32 +100,12 @@ class JslintEngine(system: ActorSystem, timeout: Timeout, jslintSourceStream: In
   }
 }
 
-object JslintEngine {
+object Jslinter {
 
-  def apply(): JslintEngine = {
-    val jslintSourceStream = JslintEngine.getClass.getClassLoader.getResourceAsStream(
+  def apply(): Jslinter = {
+    val jslintSourceStream = Jslinter.getClass.getClassLoader.getResourceAsStream(
       new WebJarAssetLocator().getFullPath("jslint.js")
     )
-    new JslintEngine(
-      withActorClassloader(ActorSystem("webdriver-system")),
-      Timeout(5.seconds),
-      jslintSourceStream
-    )
-  }
-
-  /*
-   * Sometimes the class loader associated with the actor system is required e.g. when loading configuration.
-   */
-  private def withActorClassloader[A](f: => A): A = {
-    val newLoader = ActorSystem.getClass.getClassLoader
-    val thread = Thread.currentThread
-    val oldLoader = thread.getContextClassLoader
-
-    thread.setContextClassLoader(newLoader)
-    try {
-      f
-    } finally {
-      thread.setContextClassLoader(oldLoader)
-    }
+    new Jslinter(jslintSourceStream)
   }
 }
