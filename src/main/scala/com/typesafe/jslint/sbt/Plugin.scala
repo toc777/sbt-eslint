@@ -21,7 +21,7 @@ object Plugin extends WebDriverPlugin {
 
   object JslintKeys {
     val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
-    // TODO: Define the jslint keys and pass then on to the jslinter.
+    // TODO: Define the jslint keys and pass them on to the jslinter.
   }
 
   def jslintSettings = webDriverSettings ++ Seq(
@@ -36,24 +36,23 @@ object Plugin extends WebDriverPlugin {
     streams,
     reporter in JavaScript
     ) map {
-    (
-      engineState: ActorRef, parallelism: Int, sources: Seq[File], s: TaskStreams, reporter: LoggerReporter) =>
+    (browser: ActorRef, parallelism: Int, sources: Seq[File], s: TaskStreams, reporter: LoggerReporter) =>
       s.log.info(s"JavaScript linting on ${sources.size} source(s)")
 
       val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
         try {
           val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
-          sourceBatches.map(lintForSources(engineState, _))
+          sourceBatches.map(lintForSources(browser, _))
         }
 
-      val completedResultBatches = Future.sequence(resultBatches)
-      Await.ready(completedResultBatches, 10.seconds).onComplete {
-        case Success(allResults) =>
-          for {
-            results <- allResults
-            result <- results
-          } logErrors(reporter, s.log, result._1, result._2)
-        case Failure(t) => s.log.error(s"Failed linting: $t")
+      val allResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
+      Await.ready(allResults, 10.seconds).onComplete {
+        case Success(results) =>
+          results.foreach {
+            result => logErrors(reporter, s.log, result._1, result._2)
+          }
+        case Failure(t) =>
+          s.log.error(s"Failed linting: $t")
       }
   }
 
@@ -63,8 +62,8 @@ object Plugin extends WebDriverPlugin {
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
-  private def lintForSources(engineState: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
-    jslinter.beginLint(engineState).flatMap[Seq[(File, JsArray)]] {
+  private def lintForSources(browser: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
+    jslinter.beginLint(browser).flatMap[Seq[(File, JsArray)]] {
       lintState =>
         val results = sources.map {
           source =>
