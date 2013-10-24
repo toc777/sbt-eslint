@@ -14,6 +14,7 @@ import org.webjars.WebJarAssetLocator
 import scala.collection.mutable.ListBuffer
 import scala.StringBuilder
 import scala.Some
+import scala.annotation.tailrec
 
 /**
  * This is the main service that performs the linting functionality of the plugin.  Linting is performed
@@ -82,16 +83,16 @@ class Jslinter(jslintSourceStream: InputStream) {
   private def buildFromString[T](stream: InputStream, builder: T)(build: (T, String) => Unit): T = {
     val in = new BufferedReader(new InputStreamReader(stream))
     try {
-      import scala.util.control.Breaks._
-      breakable {
-        while (true) {
-          val maybeLine = Option(in.readLine())
-          maybeLine match {
-            case Some(line) => build(builder, line)
-            case None => break()
-          }
+      @tailrec
+      def consumeLines(): Unit = {
+        in.readLine() match {
+          case null =>
+          case line =>
+            build(builder, line)
+            consumeLines()
         }
       }
+      consumeLines()
     } finally {
       in.close()
     }
