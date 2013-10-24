@@ -154,6 +154,8 @@ object Plugin extends WebDriverPlugin {
                          testing: Boolean
                           ): Unit = {
 
+    reporter.reset()
+
     val testKeyword = if (testing) "test " else ""
     s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
 
@@ -169,8 +171,11 @@ object Plugin extends WebDriverPlugin {
         results.foreach {
           result => logErrors(reporter, s.log, result._1, result._2)
         }
+        if (reporter.hasErrors()) {
+          sys.error("Failed linting.")
+        }
       case Failure(t) =>
-        s.log.error(s"Failed linting: $t")
+        sys.error(s"Failed linting: $t")
     }
   }
 
