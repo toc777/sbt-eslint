@@ -92,19 +92,17 @@ object Plugin extends WebDriverPlugin {
     jslint <<= (
       jslintOptions,
       webBrowser,
-      parallelism,
       sources in JavaScript,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, false)),
+      ) map (jslintTask(_, _, _, _, _, testing = false)),
     jslintTest <<= (
       jslintOptions,
       webBrowser,
-      parallelism,
       sources in JavaScriptTest,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, true)),
+      ) map (jslintTask(_, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jslint, jslintTest)
   )
@@ -147,7 +145,6 @@ object Plugin extends WebDriverPlugin {
   // TODO: This can be abstracted further so that source batches can be determined generally.
   private def jslintTask(jslintOptions: JsObject,
                          browser: ActorRef,
-                         parallelism: Int,
                          sources: Seq[File],
                          s: TaskStreams,
                          reporter: LoggerReporter,
@@ -159,14 +156,9 @@ object Plugin extends WebDriverPlugin {
     val testKeyword = if (testing) "test " else ""
     s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
 
-    val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
-      try {
-        val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
-        sourceBatches.map(lintForSources(jslintOptions, browser, _))
-      }
+    val pendingResults = lintForSources(jslintOptions, browser, sources)
 
-    val allResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
-    Await.ready(allResults, 10.seconds).onComplete {
+    Await.ready(pendingResults, 10.seconds).onComplete {
       case Success(results) =>
         results.foreach {
           result => logErrors(reporter, s.log, result._1, result._2)
