@@ -11,6 +11,8 @@ import scala.util.{Failure, Success}
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
 import com.typesafe.webdriver.sbt.WebDriverPlugin
+import com.typesafe.webdriver.sbt.JavaScriptSettings._
+import java.lang.RuntimeException
 
 /**
  * The WebDriver sbt plugin plumbing around the JslintEngine
@@ -56,7 +58,7 @@ object Plugin extends WebDriverPlugin {
 
   import JslintKeys._
 
-  def jslintSettings = webDriverSettings ++ Seq(
+  def jslintSettings = Seq(
     ass := None,
     bitwise := None,
     browser := None,
@@ -92,14 +94,14 @@ object Plugin extends WebDriverPlugin {
     jslint <<= (
       jslintOptions,
       webBrowser,
-      sources in JavaScript,
+      unmanagedSources in JavaScript,
       streams,
       reporter
       ) map (jslintTask(_, _, _, _, _, testing = false)),
     jslintTest <<= (
       jslintOptions,
       webBrowser,
-      sources in JavaScriptTest,
+      unmanagedSources in JavaScriptTest,
       streams,
       reporter
       ) map (jslintTask(_, _, _, _, _, testing = true)),
@@ -154,20 +156,19 @@ object Plugin extends WebDriverPlugin {
     reporter.reset()
 
     val testKeyword = if (testing) "test " else ""
-    s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
+    if (sources.size > 0) {
+      s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
+    }
 
     val pendingResults = lintForSources(jslintOptions, browser, sources)
 
-    Await.ready(pendingResults, 10.seconds).onComplete {
-      case Success(results) =>
-        results.foreach {
-          result => logErrors(reporter, s.log, result._1, result._2)
-        }
-        if (reporter.hasErrors()) {
-          sys.error("Failed linting.")
-        }
-      case Failure(t) =>
-        sys.error(s"Failed linting: $t")
+    val results = Await.result(pendingResults, 10.seconds)
+    results.foreach { result =>
+      logErrors(reporter, s.log, result._1, result._2)
+    }
+    reporter.printSummary()
+    if (reporter.hasErrors()) {
+      throw new LintingFailedException
     }
   }
 
@@ -203,9 +204,12 @@ object Plugin extends WebDriverPlugin {
           val p = new Position {
             def line(): Maybe[Integer] = Maybe.just(Integer.parseInt(o.fields.get("line").get.toString()))
 
-            def lineContent(): String = o.fields.get("evidence").get.toString()
+            def lineContent(): String = o.fields.get("evidence") match {
+              case Some(JsString(line)) => line
+              case _ => ""
+            }
 
-            def offset(): Maybe[Integer] = Maybe.just(Integer.parseInt(o.fields.get("character").get.toString()))
+            def offset(): Maybe[Integer] = Maybe.just(Integer.parseInt(o.fields.get("character").get.toString()) - 1)
 
             def pointer(): Maybe[Integer] = offset()
 
@@ -232,6 +236,9 @@ object Plugin extends WebDriverPlugin {
         }
       case x@_ => log.error(s"Malformed result: $x")
     }
-    reporter.printSummary()
   }
+}
+
+class LintingFailedException extends RuntimeException("JavaScript linting failed") with FeedbackProvidedException {
+  override def toString = getMessage
 }
