@@ -4,7 +4,7 @@ import sbt.Keys._
 import sbt._
 import akka.actor.ActorRef
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import spray.json._
 import com.typesafe.jslint.Jslinter
@@ -12,6 +12,7 @@ import xsbti.{Maybe, Position, Severity}
 import com.typesafe.webdriver.sbt.WebDriverPlugin
 import com.typesafe.webdriver.sbt.JavaScriptSettings._
 import java.lang.RuntimeException
+
 
 /**
  * The WebDriver sbt plugin plumbing around the JslintEngine
@@ -94,16 +95,18 @@ object Plugin extends WebDriverPlugin {
       jslintOptions,
       webBrowser,
       unmanagedSources in JavaScript,
+      parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, testing = false)),
+      ) map (jslintTask(_, _, _, _, _, _, testing = false)),
     jslintTest <<= (
       jslintOptions,
       webBrowser,
       unmanagedSources in JavaScriptTest,
+      parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, testing = true)),
+      ) map (jslintTask(_, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jslint, jslintTest)
   )
@@ -147,6 +150,7 @@ object Plugin extends WebDriverPlugin {
   private def jslintTask(jslintOptions: JsObject,
                          browser: ActorRef,
                          sources: Seq[File],
+                         parallelism: Int,
                          s: TaskStreams,
                          reporter: LoggerReporter,
                          testing: Boolean
@@ -159,11 +163,17 @@ object Plugin extends WebDriverPlugin {
       s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
     }
 
-    val pendingResults = lintForSources(jslintOptions, browser, sources)
+    val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
+      try {
+        val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
+        sourceBatches.map(lintForSources(jslintOptions, browser, _))
+      }
 
+    val pendingResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
     val results = Await.result(pendingResults, 10.seconds)
-    results.foreach { result =>
-      logErrors(reporter, s.log, result._1, result._2)
+    results.foreach {
+      result =>
+        logErrors(reporter, s.log, result._1, result._2)
     }
     reporter.printSummary()
     if (reporter.hasErrors()) {
@@ -178,17 +188,31 @@ object Plugin extends WebDriverPlugin {
    */
   private def lintForSources(options: JsObject, browser: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
     jslinter.beginLint(browser).flatMap[Seq[(File, JsArray)]] {
-      lintState =>
-        val results = sources.map {
-          source =>
-            val lintResult = jslinter.lint(lintState, source, options)
-              .map(result => (source, result))
-            lintResult.onComplete {
-              case _ => jslinter.endLint(lintState)
-            }
-            lintResult
+      session =>
+        val promisedResults = Seq.fill(sources.size)(Promise[(File, JsArray)]())
+        lintNextSource(session, options, sources, promisedResults)
+        val allResults = Future.sequence(promisedResults.map(_.future))
+        allResults.onComplete {
+          case _ => jslinter.endLint(session)
         }
-        Future.sequence(results)
+        allResults
+    }
+  }
+
+  /*
+   * lint the next source in sequence and call again upon completion for the next one after that.
+   */
+  private def lintNextSource(session: ActorRef, options: JsObject, sources: Seq[File], promises: Seq[Promise[(File, JsArray)]]): Unit = {
+    if (sources.size > 0) {
+      val source = sources.head
+
+      jslinter.lint(session, source, options)
+        .map((source, _))
+        .onComplete {
+        c =>
+          lintNextSource(session, options, sources.tail, promises.tail)
+          promises.head.complete(c)
+      }
     }
   }
 
