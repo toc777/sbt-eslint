@@ -13,7 +13,6 @@ import spray.json._
 import org.webjars.WebJarAssetLocator
 import scala.collection.mutable.ListBuffer
 import scala.StringBuilder
-import scala.Some
 import scala.annotation.tailrec
 
 /**

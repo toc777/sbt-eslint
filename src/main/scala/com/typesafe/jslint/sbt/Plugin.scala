@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import spray.json._
-import scala.util.{Failure, Success}
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
 import com.typesafe.webdriver.sbt.WebDriverPlugin
