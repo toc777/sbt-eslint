@@ -30,16 +30,16 @@ class Jslinter(jslintSourceStream: InputStream) {
 
   /**
    * Declare the start of a sequence of linting to be done.
-   * @param engineState the engine state.
-   * @return a future of a state to be used for the linting.
+   * @param browser the browser handling our requests.
+   * @return a future of a session to be used for the linting.
    */
-  def beginLint(engineState: ActorRef)(implicit timeout: Timeout): Future[ActorRef] = {
-    (engineState ? LocalBrowser.CreateSession).mapTo[ActorRef]
+  def beginLint(browser: ActorRef)(implicit timeout: Timeout): Future[ActorRef] = {
+    (browser ? LocalBrowser.CreateSession).mapTo[ActorRef]
   }
 
   /**
    * Perform Jslint on a file
-   * @param lintState the linting state.
+   * @param session the linting state.
    * @param fileToLint the file to lint.
    * @param options The Jslint options as a JSONObject structure.
    * @return a Json array of objects structure as per JSLINT.errors i.e.:
@@ -53,7 +53,7 @@ class Jslinter(jslintSourceStream: InputStream) {
    *         c         : The third detail
    *         d         : The fourth detail
    */
-  def lint(lintState: ActorRef, fileToLint: File, options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
+  def lint(session: ActorRef, fileToLint: File, options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
     val targetJs = s"""|$jslintSource
                        |JSLINT(arguments[0], arguments[1]);
                        |return JSLINT.errors;
@@ -65,15 +65,15 @@ class Jslinter(jslintSourceStream: InputStream) {
       }.toList
     )
 
-    (lintState ? Session.ExecuteJs(targetJs, JsArray(fileToLintAsJsArray, options))).mapTo[JsArray]
+    (session ? Session.ExecuteJs(targetJs, JsArray(fileToLintAsJsArray, options))).mapTo[JsArray]
   }
 
   /**
    * Declaring the end of linting and clean up.
-   * @param lintState the linting state.
+   * @param session the linting session.
    */
-  def endLint(lintState: ActorRef): Unit = {
-    lintState ! PoisonPill
+  def endLint(session: ActorRef): Unit = {
+    session ! PoisonPill
   }
 
   /*
