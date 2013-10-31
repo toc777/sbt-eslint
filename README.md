@@ -17,4 +17,15 @@ Options can be specified in accordance with the
 
     JslintKeys.passfail := Some(true)
 
+By default (HtmlUnit)[http://htmlunit.sourceforge.net/] is used as the JavaScript engine (HtmlUnit provides a browser
+environment to (Rhino)[https://developer.mozilla.org/en/docs/Rhino]) entirely within the JVM requiring no
+additional downloads.
+(PhantomJS)[http://phantomjs.org/] is supported as a native browser option for fast and native JavaScript execution.
+To use PhantomJs instead of HtmlUnit declare the following in your build file:
+
+    WebDriverKeys.browserType in Global := WebDriverKeys.BrowserType.PhantomJs
+
+PhantomJs is required to be available on your shell's path in order for it to be used. To check for its availability
+simply type `phantomjs`.
+
 &copy; Typesafe Inc., 2013
