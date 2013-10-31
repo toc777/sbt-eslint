@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.util.Success
 
 @RunWith(classOf[JUnitRunner])
-class JslintEngineSpec extends Specification with NoTimeConversions {
+class JslinterSpec extends Specification with NoTimeConversions {
 
   val jslintSourceStream = Jslinter.getClass.getClassLoader.getResourceAsStream(
     new WebJarAssetLocator().getFullPath("jslint.js")
