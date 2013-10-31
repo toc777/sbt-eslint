@@ -56,7 +56,7 @@ class Jslinter(jslintSourceStream: InputStream) {
   def lint(session: ActorRef, fileToLint: File, options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
     val targetJs = s"""|$jslintSource
                        |JSLINT(arguments[0], arguments[1]);
-                       |return JSLINT.errors;
+                       |var result = JSLINT.errors;
                        |""".stripMargin
 
     val fileToLintAsJsArray = JsArray(

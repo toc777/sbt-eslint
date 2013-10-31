@@ -225,14 +225,16 @@ object Plugin extends WebDriverPlugin {
 
         def logWithSeverity(o: JsObject, s: Severity): Unit = {
           val p = new Position {
-            def line(): Maybe[Integer] = Maybe.just(Integer.parseInt(o.fields.get("line").get.toString()))
+            def line(): Maybe[Integer] =
+              Maybe.just(java.lang.Double.parseDouble(o.fields.get("line").get.toString()).toInt)
 
             def lineContent(): String = o.fields.get("evidence") match {
               case Some(JsString(line)) => line
               case _ => ""
             }
 
-            def offset(): Maybe[Integer] = Maybe.just(Integer.parseInt(o.fields.get("character").get.toString()) - 1)
+            def offset(): Maybe[Integer] =
+              Maybe.just(java.lang.Double.parseDouble(o.fields.get("character").get.toString()).toInt - 1)
 
             def pointer(): Maybe[Integer] = offset()
 
