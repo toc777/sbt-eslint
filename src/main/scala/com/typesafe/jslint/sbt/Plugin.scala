@@ -10,7 +10,7 @@ import spray.json._
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
 import com.typesafe.webdriver.sbt.WebDriverPlugin
-import com.typesafe.webdriver.sbt.JavaScriptSettings._
+import com.typesafe.js.sbt.JavaScriptSettings._
 import java.lang.RuntimeException
 
 
