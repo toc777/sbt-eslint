@@ -10,7 +10,6 @@ import spray.json._
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
 import com.typesafe.webdriver.sbt.WebDriverPlugin
-import com.typesafe.js.sbt.JavaScriptSettings._
 import java.lang.RuntimeException
 
 
@@ -18,8 +17,6 @@ import java.lang.RuntimeException
  * The WebDriver sbt plugin plumbing around the JslintEngine
  */
 object Plugin extends WebDriverPlugin {
-
-  import WebDriverKeys._
 
   object JslintKeys {
     val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
@@ -56,7 +53,9 @@ object Plugin extends WebDriverPlugin {
     val jslintOptions = TaskKey[JsObject]("jslint-options", "An array of jslint options to pass to the linter.")
   }
 
+  import JavaScriptKeys._
   import JslintKeys._
+  import WebDriverKeys._
 
   def jslintSettings = Seq(
     ass := None,

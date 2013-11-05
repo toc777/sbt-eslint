@@ -18,8 +18,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % "2.2.1" % "test"
 )
 
-addSbtPlugin("com.typesafe" %% "js-sbt" % "1.0.0-SNAPSHOT")
-
 addSbtPlugin("com.typesafe" %% "webdriver-sbt" % "1.0.0-SNAPSHOT")
 
 scriptedSettings
