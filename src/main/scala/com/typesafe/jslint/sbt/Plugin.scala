@@ -9,14 +9,17 @@ import scala.concurrent.duration._
 import spray.json._
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
-import com.typesafe.webdriver.sbt.WebDriverPlugin
 import java.lang.RuntimeException
+import com.typesafe.js.sbt.JavaScriptPlugin.JavaScriptKeys
+import com.typesafe.webdriver.sbt.WebDriverPlugin.WebDriverKeys
+import com.typesafe.webdriver.sbt.WebDriverPlugin
+import akka.util.Timeout
 
 
 /**
  * The WebDriver sbt plugin plumbing around the JslintEngine
  */
-object Plugin extends WebDriverPlugin {
+object Plugin extends sbt.Plugin {
 
   object JslintKeys {
     val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
@@ -179,6 +182,9 @@ object Plugin extends WebDriverPlugin {
       throw new LintingFailedException
     }
   }
+
+  implicit val webDriverSystem = WebDriverPlugin.webDriverSystem
+  implicit val webDriverTimeout = WebDriverPlugin.webDriverTimeout
 
   private val jslinter = Jslinter()
 
