@@ -10,10 +10,9 @@ import spray.json._
 import com.typesafe.jslint.Jslinter
 import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
-import com.typesafe.js.sbt.JavaScriptPlugin.JavaScriptKeys
+import com.typesafe.js.sbt.WebPlugin.WebKeys
 import com.typesafe.webdriver.sbt.WebDriverPlugin.WebDriverKeys
 import com.typesafe.webdriver.sbt.WebDriverPlugin
-import akka.util.Timeout
 
 
 /**
@@ -56,7 +55,7 @@ object Plugin extends sbt.Plugin {
     val jslintOptions = TaskKey[JsObject]("jslint-options", "An array of jslint options to pass to the linter.")
   }
 
-  import JavaScriptKeys._
+  import WebKeys._
   import JslintKeys._
   import WebDriverKeys._
 
@@ -96,7 +95,7 @@ object Plugin extends sbt.Plugin {
     jslint <<= (
       jslintOptions,
       webBrowser,
-      unmanagedSources in JavaScript,
+      unmanagedSources in Web,
       parallelism,
       streams,
       reporter
@@ -104,7 +103,7 @@ object Plugin extends sbt.Plugin {
     jslintTest <<= (
       jslintOptions,
       webBrowser,
-      unmanagedSources in JavaScriptTest,
+      unmanagedSources in WebTest,
       parallelism,
       streams,
       reporter
@@ -116,35 +115,35 @@ object Plugin extends sbt.Plugin {
   private def jslintOptionsTask(state: State): JsObject = {
     val extracted = Project.extract(state)
     JsObject(List(
-      extracted.get(ass in JavaScript).map(v => "ass" -> JsBoolean(v)),
-      extracted.get(bitwise in JavaScript).map(v => "bitwise" -> JsBoolean(v)),
-      extracted.get(browser in JavaScript).map(v => "browser" -> JsBoolean(v)),
-      extracted.get(closure in JavaScript).map(v => "closure" -> JsBoolean(v)),
-      extracted.get(continue in JavaScript).map(v => "continue" -> JsBoolean(v)),
-      extracted.get(debug in JavaScript).map(v => "debug" -> JsBoolean(v)),
-      extracted.get(devel in JavaScript).map(v => "devel" -> JsBoolean(v)),
-      extracted.get(eqeq in JavaScript).map(v => "eqeq" -> JsBoolean(v)),
-      extracted.get(es5 in JavaScript).map(v => "es5" -> JsBoolean(v)),
-      extracted.get(evil in JavaScript).map(v => "evil" -> JsBoolean(v)),
-      extracted.get(forin in JavaScript).map(v => "forin" -> JsBoolean(v)),
-      extracted.get(indent in JavaScript).map(v => "indent" -> JsNumber(v)),
-      extracted.get(maxerr in JavaScript).map(v => "maxerr" -> JsNumber(v)),
-      extracted.get(maxlen in JavaScript).map(v => "maxlen" -> JsNumber(v)),
-      extracted.get(newcap in JavaScript).map(v => "newcap" -> JsBoolean(v)),
-      extracted.get(node in JavaScript).map(v => "node" -> JsBoolean(v)),
-      extracted.get(nomen in JavaScript).map(v => "nomen" -> JsBoolean(v)),
-      extracted.get(passfail in JavaScript).map(v => "passfail" -> JsBoolean(v)),
-      extracted.get(plusplus in JavaScript).map(v => "plusplus" -> JsBoolean(v)),
-      extracted.get(properties in JavaScript).map(v => "properties" -> JsBoolean(v)),
-      extracted.get(regexp in JavaScript).map(v => "regexp" -> JsBoolean(v)),
-      extracted.get(rhino in JavaScript).map(v => "rhino" -> JsBoolean(v)),
-      extracted.get(unparam in JavaScript).map(v => "unparam" -> JsBoolean(v)),
-      extracted.get(sloppy in JavaScript).map(v => "sloppy" -> JsBoolean(v)),
-      extracted.get(stupid in JavaScript).map(v => "stupid" -> JsBoolean(v)),
-      extracted.get(sub in JavaScript).map(v => "sub" -> JsBoolean(v)),
-      extracted.get(todo in JavaScript).map(v => "todo" -> JsBoolean(v)),
-      extracted.get(vars in JavaScript).map(v => "vars" -> JsBoolean(v)),
-      extracted.get(white in JavaScript).map(v => "white" -> JsBoolean(v))
+      extracted.get(ass in Web).map(v => "ass" -> JsBoolean(v)),
+      extracted.get(bitwise in Web).map(v => "bitwise" -> JsBoolean(v)),
+      extracted.get(browser in Web).map(v => "browser" -> JsBoolean(v)),
+      extracted.get(closure in Web).map(v => "closure" -> JsBoolean(v)),
+      extracted.get(continue in Web).map(v => "continue" -> JsBoolean(v)),
+      extracted.get(debug in Web).map(v => "debug" -> JsBoolean(v)),
+      extracted.get(devel in Web).map(v => "devel" -> JsBoolean(v)),
+      extracted.get(eqeq in Web).map(v => "eqeq" -> JsBoolean(v)),
+      extracted.get(es5 in Web).map(v => "es5" -> JsBoolean(v)),
+      extracted.get(evil in Web).map(v => "evil" -> JsBoolean(v)),
+      extracted.get(forin in Web).map(v => "forin" -> JsBoolean(v)),
+      extracted.get(indent in Web).map(v => "indent" -> JsNumber(v)),
+      extracted.get(maxerr in Web).map(v => "maxerr" -> JsNumber(v)),
+      extracted.get(maxlen in Web).map(v => "maxlen" -> JsNumber(v)),
+      extracted.get(newcap in Web).map(v => "newcap" -> JsBoolean(v)),
+      extracted.get(node in Web).map(v => "node" -> JsBoolean(v)),
+      extracted.get(nomen in Web).map(v => "nomen" -> JsBoolean(v)),
+      extracted.get(passfail in Web).map(v => "passfail" -> JsBoolean(v)),
+      extracted.get(plusplus in Web).map(v => "plusplus" -> JsBoolean(v)),
+      extracted.get(properties in Web).map(v => "properties" -> JsBoolean(v)),
+      extracted.get(regexp in Web).map(v => "regexp" -> JsBoolean(v)),
+      extracted.get(rhino in Web).map(v => "rhino" -> JsBoolean(v)),
+      extracted.get(unparam in Web).map(v => "unparam" -> JsBoolean(v)),
+      extracted.get(sloppy in Web).map(v => "sloppy" -> JsBoolean(v)),
+      extracted.get(stupid in Web).map(v => "stupid" -> JsBoolean(v)),
+      extracted.get(sub in Web).map(v => "sub" -> JsBoolean(v)),
+      extracted.get(todo in Web).map(v => "todo" -> JsBoolean(v)),
+      extracted.get(vars in Web).map(v => "vars" -> JsBoolean(v)),
+      extracted.get(white in Web).map(v => "white" -> JsBoolean(v))
     ).flatten)
   }
 
