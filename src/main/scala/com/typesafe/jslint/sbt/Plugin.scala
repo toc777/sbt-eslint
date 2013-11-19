@@ -95,19 +95,21 @@ object Plugin extends sbt.Plugin {
     jslint <<= (
       jslintOptions,
       webBrowser,
-      unmanagedSources in Web,
+      unmanagedSources in Assets,
+      jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, testing = false)),
+      ) map (jslintTask(_, _, _, _, _, _, _, testing = false)),
     jslintTest <<= (
       jslintOptions,
       webBrowser,
-      unmanagedSources in WebTest,
+      unmanagedSources in TestAssets,
+      jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, testing = true)),
+      ) map (jslintTask(_, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jslint, jslintTest)
   )
@@ -115,42 +117,43 @@ object Plugin extends sbt.Plugin {
   private def jslintOptionsTask(state: State): JsObject = {
     val extracted = Project.extract(state)
     JsObject(List(
-      extracted.get(ass in Web).map(v => "ass" -> JsBoolean(v)),
-      extracted.get(bitwise in Web).map(v => "bitwise" -> JsBoolean(v)),
-      extracted.get(browser in Web).map(v => "browser" -> JsBoolean(v)),
-      extracted.get(closure in Web).map(v => "closure" -> JsBoolean(v)),
-      extracted.get(continue in Web).map(v => "continue" -> JsBoolean(v)),
-      extracted.get(debug in Web).map(v => "debug" -> JsBoolean(v)),
-      extracted.get(devel in Web).map(v => "devel" -> JsBoolean(v)),
-      extracted.get(eqeq in Web).map(v => "eqeq" -> JsBoolean(v)),
-      extracted.get(es5 in Web).map(v => "es5" -> JsBoolean(v)),
-      extracted.get(evil in Web).map(v => "evil" -> JsBoolean(v)),
-      extracted.get(forin in Web).map(v => "forin" -> JsBoolean(v)),
-      extracted.get(indent in Web).map(v => "indent" -> JsNumber(v)),
-      extracted.get(maxerr in Web).map(v => "maxerr" -> JsNumber(v)),
-      extracted.get(maxlen in Web).map(v => "maxlen" -> JsNumber(v)),
-      extracted.get(newcap in Web).map(v => "newcap" -> JsBoolean(v)),
-      extracted.get(node in Web).map(v => "node" -> JsBoolean(v)),
-      extracted.get(nomen in Web).map(v => "nomen" -> JsBoolean(v)),
-      extracted.get(passfail in Web).map(v => "passfail" -> JsBoolean(v)),
-      extracted.get(plusplus in Web).map(v => "plusplus" -> JsBoolean(v)),
-      extracted.get(properties in Web).map(v => "properties" -> JsBoolean(v)),
-      extracted.get(regexp in Web).map(v => "regexp" -> JsBoolean(v)),
-      extracted.get(rhino in Web).map(v => "rhino" -> JsBoolean(v)),
-      extracted.get(unparam in Web).map(v => "unparam" -> JsBoolean(v)),
-      extracted.get(sloppy in Web).map(v => "sloppy" -> JsBoolean(v)),
-      extracted.get(stupid in Web).map(v => "stupid" -> JsBoolean(v)),
-      extracted.get(sub in Web).map(v => "sub" -> JsBoolean(v)),
-      extracted.get(todo in Web).map(v => "todo" -> JsBoolean(v)),
-      extracted.get(vars in Web).map(v => "vars" -> JsBoolean(v)),
-      extracted.get(white in Web).map(v => "white" -> JsBoolean(v))
+      extracted.get(ass).map(v => "ass" -> JsBoolean(v)),
+      extracted.get(bitwise).map(v => "bitwise" -> JsBoolean(v)),
+      extracted.get(browser).map(v => "browser" -> JsBoolean(v)),
+      extracted.get(closure).map(v => "closure" -> JsBoolean(v)),
+      extracted.get(continue).map(v => "continue" -> JsBoolean(v)),
+      extracted.get(debug).map(v => "debug" -> JsBoolean(v)),
+      extracted.get(devel).map(v => "devel" -> JsBoolean(v)),
+      extracted.get(eqeq).map(v => "eqeq" -> JsBoolean(v)),
+      extracted.get(es5).map(v => "es5" -> JsBoolean(v)),
+      extracted.get(evil).map(v => "evil" -> JsBoolean(v)),
+      extracted.get(forin).map(v => "forin" -> JsBoolean(v)),
+      extracted.get(indent).map(v => "indent" -> JsNumber(v)),
+      extracted.get(maxerr).map(v => "maxerr" -> JsNumber(v)),
+      extracted.get(maxlen).map(v => "maxlen" -> JsNumber(v)),
+      extracted.get(newcap).map(v => "newcap" -> JsBoolean(v)),
+      extracted.get(node).map(v => "node" -> JsBoolean(v)),
+      extracted.get(nomen).map(v => "nomen" -> JsBoolean(v)),
+      extracted.get(passfail).map(v => "passfail" -> JsBoolean(v)),
+      extracted.get(plusplus).map(v => "plusplus" -> JsBoolean(v)),
+      extracted.get(properties).map(v => "properties" -> JsBoolean(v)),
+      extracted.get(regexp).map(v => "regexp" -> JsBoolean(v)),
+      extracted.get(rhino).map(v => "rhino" -> JsBoolean(v)),
+      extracted.get(unparam).map(v => "unparam" -> JsBoolean(v)),
+      extracted.get(sloppy).map(v => "sloppy" -> JsBoolean(v)),
+      extracted.get(stupid).map(v => "stupid" -> JsBoolean(v)),
+      extracted.get(sub).map(v => "sub" -> JsBoolean(v)),
+      extracted.get(todo).map(v => "todo" -> JsBoolean(v)),
+      extracted.get(vars).map(v => "vars" -> JsBoolean(v)),
+      extracted.get(white).map(v => "white" -> JsBoolean(v))
     ).flatten)
   }
 
-  // TODO: This can be abstracted further so that source batches can be determined generally.
+  // TODO: This can be abstracted further so that source batches can be determined generally?
   private def jslintTask(jslintOptions: JsObject,
                          browser: ActorRef,
-                         sources: Seq[File],
+                         unmanagedSources: Seq[File],
+                         jsFilter: FileFilter,
                          parallelism: Int,
                          s: TaskStreams,
                          reporter: LoggerReporter,
@@ -158,6 +161,8 @@ object Plugin extends sbt.Plugin {
                           ): Unit = {
 
     reporter.reset()
+
+    val sources = (unmanagedSources ** jsFilter).get
 
     val testKeyword = if (testing) "test " else ""
     if (sources.size > 0) {
