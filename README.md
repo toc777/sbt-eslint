@@ -1,4 +1,4 @@
-jslint-sbt-plugin
+sbt-jslint-plugin
 =================
 
 Allows jslint to be used from within sbt. Builds on com.typesafe:webdriver in order to execute jslint.js
