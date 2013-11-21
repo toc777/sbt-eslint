@@ -11,8 +11,8 @@ import com.typesafe.jshint.Jshinter
 import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
 import com.typesafe.js.sbt.WebPlugin.WebKeys
-import com.typesafe.webdriver.sbt.WebDriverPlugin.WebDriverKeys
-import com.typesafe.webdriver.sbt.WebDriverPlugin
+import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
+import com.typesafe.jse.sbt.JsEnginePlugin
 
 
 /**
@@ -57,7 +57,7 @@ object Plugin extends sbt.Plugin {
 
   import WebKeys._
   import JshintKeys._
-  import WebDriverKeys._
+  import JsEngineKeys._
 
   def jshintSettings = Seq(
     ass := None,
@@ -94,22 +94,20 @@ object Plugin extends sbt.Plugin {
 
     jshint <<= (
       jshintOptions,
-      webBrowser,
       unmanagedSources in Assets,
       jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, testing = false)),
     jshintTest <<= (
       jshintOptions,
-      webBrowser,
       unmanagedSources in TestAssets,
       jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
   )
@@ -151,7 +149,6 @@ object Plugin extends sbt.Plugin {
 
   // TODO: This can be abstracted further so that source batches can be determined generally?
   private def jshintTask(jshintOptions: JsObject,
-                         browser: ActorRef,
                          unmanagedSources: Seq[File],
                          jsFilter: FileFilter,
                          parallelism: Int,
@@ -172,14 +169,15 @@ object Plugin extends sbt.Plugin {
     val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
       try {
         val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
-        sourceBatches.map(lintForSources(jshintOptions, browser, _))
+        //sourceBatches.map(lintForSources(jshintOptions, browser, _))
+        Nil
       }
 
     val pendingResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
     val results = Await.result(pendingResults, 10.seconds)
     results.foreach {
       result =>
-        logErrors(reporter, s.log, result._1, result._2)
+        //logErrors(reporter, s.log, result._1, result._2)
     }
     reporter.printSummary()
     if (reporter.hasErrors()) {
@@ -187,10 +185,10 @@ object Plugin extends sbt.Plugin {
     }
   }
 
-  implicit val webDriverSystem = WebDriverPlugin.webDriverSystem
-  implicit val webDriverTimeout = WebDriverPlugin.webDriverTimeout
+  implicit val jseSystem = JsEnginePlugin.jseSystem
+  implicit val jseTimeout = JsEnginePlugin.jseTimeout
 
-  private val jshinter = Jshinter()
+ /* private val jshinter = Jshinter()
 
   /*
    * lints a sequence of sources and returns a future representing the results of all.
@@ -270,7 +268,7 @@ object Plugin extends sbt.Plugin {
         }
       case x@_ => log.error(s"Malformed result: $x")
     }
-  }
+  }   */
 }
 
 class LintingFailedException extends RuntimeException("JavaScript linting failed") with FeedbackProvidedException {
