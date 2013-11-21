@@ -1,4 +1,4 @@
-package com.typesafe.webdriver.jslint
+package com.typesafe.webdriver.jshint
 
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.actor.ActorSystem

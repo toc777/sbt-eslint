@@ -1,4 +1,4 @@
-package com.typesafe.webdriver.jslint
+package com.typesafe.webdriver.jshint
 
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner

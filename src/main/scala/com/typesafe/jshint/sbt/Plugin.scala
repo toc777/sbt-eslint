@@ -1,4 +1,4 @@
-package com.typesafe.jslint.sbt
+package com.typesafe.jshint.sbt
 
 import sbt.Keys._
 import sbt._
@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import spray.json._
-import com.typesafe.jslint.Jslinter
+import com.typesafe.jshint.Jshinter
 import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
 import com.typesafe.js.sbt.WebPlugin.WebKeys
@@ -16,50 +16,50 @@ import com.typesafe.webdriver.sbt.WebDriverPlugin
 
 
 /**
- * The WebDriver sbt plugin plumbing around the JslintEngine
+ * The WebDriver sbt plugin plumbing around the JshintEngine
  */
 object Plugin extends sbt.Plugin {
 
-  object JslintKeys {
-    val jslint = TaskKey[Unit]("jslint", "Perform JavaScript linting.")
-    val jslintTest = TaskKey[Unit]("jslint-test", "Perform JavaScript linting for tests.")
-    val ass = SettingKey[Option[Boolean]]("jslint-ass", "If assignment expressions should be allowed.")
-    val bitwise = SettingKey[Option[Boolean]]("jslint-bitwise", "If bitwise operators should be allowed.")
-    val browser = SettingKey[Option[Boolean]]("jslint-browser", "If the standard browser globals should be predefined.")
-    val closure = SettingKey[Option[Boolean]]("jslint-closure", "If Google Closure idioms should be tolerated.")
-    val continue = SettingKey[Option[Boolean]]("jslint-continue", "If the continuation statement should be tolerated.")
-    val debug = SettingKey[Option[Boolean]]("jslint-debug", "if debugger statements should be allowed.")
-    val devel = SettingKey[Option[Boolean]]("jslint-devel", "if logging should be allowed (console, alert, etc.).")
-    val eqeq = SettingKey[Option[Boolean]]("jslint-eqeq", "if == should be allowed.")
-    val es5 = SettingKey[Option[Boolean]]("jslint-es5", "if ES5 syntax should be allowed.")
-    val evil = SettingKey[Option[Boolean]]("jslint-evil", "if eval should be allowed.")
-    val forin = SettingKey[Option[Boolean]]("jslint-forin", "if for in statements need not filter.")
-    val indent = SettingKey[Option[Int]]("jslint-indent", "the indentation factor.")
-    val maxerr = SettingKey[Option[Int]]("jslint-maxerr", "the maximum number of errors to allow.")
-    val maxlen = SettingKey[Option[Int]]("jslint-maxlen", "the maximum length of a source line.")
-    val newcap = SettingKey[Option[Boolean]]("jslint-newcap", "if constructor names capitalization is ignored.")
-    val node = SettingKey[Option[Boolean]]("jslint-node", "if Node.js globals should be predefined.")
-    val nomen = SettingKey[Option[Boolean]]("jslint-nomen", "if names may have dangling.")
-    val passfail = SettingKey[Option[Boolean]]("jslint-passfail", "if the scan should stop on first error.")
-    val plusplus = SettingKey[Option[Boolean]]("jslint-plusplus", "if increment/decrement should be allowed.")
-    val properties = SettingKey[Option[Boolean]]("jslint-properties", "if all property names must be declared with /*properties*/.")
-    val regexp = SettingKey[Option[Boolean]]("jslint-regexp", "if the . should be allowed in regexp literals.")
-    val rhino = SettingKey[Option[Boolean]]("jslint-rhino", "if the Rhino environment globals should be predefined.")
-    val unparam = SettingKey[Option[Boolean]]("jslint-unparam", "if unused parameters should be tolerated.")
-    val sloppy = SettingKey[Option[Boolean]]("jslint-sloppy", "if the 'use strict'; pragma is optional.")
-    val stupid = SettingKey[Option[Boolean]]("jslint-stupid", "if really stupid practices are tolerated.")
-    val sub = SettingKey[Option[Boolean]]("jslint-sub", "if all forms of subscript notation are tolerated.")
-    val todo = SettingKey[Option[Boolean]]("jslint-todo", "if TODO comments are tolerated.")
-    val vars = SettingKey[Option[Boolean]]("jslint-vars", "if multiple var statements per function should be allowed.")
-    val white = SettingKey[Option[Boolean]]("jslint-white", "if sloppy whitespace is tolerated.")
-    val jslintOptions = TaskKey[JsObject]("jslint-options", "An array of jslint options to pass to the linter.")
+  object JshintKeys {
+    val jshint = TaskKey[Unit]("jshint", "Perform JavaScript linting.")
+    val jshintTest = TaskKey[Unit]("jshint-test", "Perform JavaScript linting for tests.")
+    val ass = SettingKey[Option[Boolean]]("jshint-ass", "If assignment expressions should be allowed.")
+    val bitwise = SettingKey[Option[Boolean]]("jshint-bitwise", "If bitwise operators should be allowed.")
+    val browser = SettingKey[Option[Boolean]]("jshint-browser", "If the standard browser globals should be predefined.")
+    val closure = SettingKey[Option[Boolean]]("jshint-closure", "If Google Closure idioms should be tolerated.")
+    val continue = SettingKey[Option[Boolean]]("jshint-continue", "If the continuation statement should be tolerated.")
+    val debug = SettingKey[Option[Boolean]]("jshint-debug", "if debugger statements should be allowed.")
+    val devel = SettingKey[Option[Boolean]]("jshint-devel", "if logging should be allowed (console, alert, etc.).")
+    val eqeq = SettingKey[Option[Boolean]]("jshint-eqeq", "if == should be allowed.")
+    val es5 = SettingKey[Option[Boolean]]("jshint-es5", "if ES5 syntax should be allowed.")
+    val evil = SettingKey[Option[Boolean]]("jshint-evil", "if eval should be allowed.")
+    val forin = SettingKey[Option[Boolean]]("jshint-forin", "if for in statements need not filter.")
+    val indent = SettingKey[Option[Int]]("jshint-indent", "the indentation factor.")
+    val maxerr = SettingKey[Option[Int]]("jshint-maxerr", "the maximum number of errors to allow.")
+    val maxlen = SettingKey[Option[Int]]("jshint-maxlen", "the maximum length of a source line.")
+    val newcap = SettingKey[Option[Boolean]]("jshint-newcap", "if constructor names capitalization is ignored.")
+    val node = SettingKey[Option[Boolean]]("jshint-node", "if Node.js globals should be predefined.")
+    val nomen = SettingKey[Option[Boolean]]("jshint-nomen", "if names may have dangling.")
+    val passfail = SettingKey[Option[Boolean]]("jshint-passfail", "if the scan should stop on first error.")
+    val plusplus = SettingKey[Option[Boolean]]("jshint-plusplus", "if increment/decrement should be allowed.")
+    val properties = SettingKey[Option[Boolean]]("jshint-properties", "if all property names must be declared with /*properties*/.")
+    val regexp = SettingKey[Option[Boolean]]("jshint-regexp", "if the . should be allowed in regexp literals.")
+    val rhino = SettingKey[Option[Boolean]]("jshint-rhino", "if the Rhino environment globals should be predefined.")
+    val unparam = SettingKey[Option[Boolean]]("jshint-unparam", "if unused parameters should be tolerated.")
+    val sloppy = SettingKey[Option[Boolean]]("jshint-sloppy", "if the 'use strict'; pragma is optional.")
+    val stupid = SettingKey[Option[Boolean]]("jshint-stupid", "if really stupid practices are tolerated.")
+    val sub = SettingKey[Option[Boolean]]("jshint-sub", "if all forms of subscript notation are tolerated.")
+    val todo = SettingKey[Option[Boolean]]("jshint-todo", "if TODO comments are tolerated.")
+    val vars = SettingKey[Option[Boolean]]("jshint-vars", "if multiple var statements per function should be allowed.")
+    val white = SettingKey[Option[Boolean]]("jshint-white", "if sloppy whitespace is tolerated.")
+    val jshintOptions = TaskKey[JsObject]("jshint-options", "An array of jshint options to pass to the linter.")
   }
 
   import WebKeys._
-  import JslintKeys._
+  import JshintKeys._
   import WebDriverKeys._
 
-  def jslintSettings = Seq(
+  def jshintSettings = Seq(
     ass := None,
     bitwise := None,
     browser := None,
@@ -90,31 +90,31 @@ object Plugin extends sbt.Plugin {
     vars := None,
     white := None,
 
-    jslintOptions <<= state map jslintOptionsTask,
+    jshintOptions <<= state map jshintOptionsTask,
 
-    jslint <<= (
-      jslintOptions,
+    jshint <<= (
+      jshintOptions,
       webBrowser,
       unmanagedSources in Assets,
       jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, _, testing = false)),
-    jslintTest <<= (
-      jslintOptions,
+      ) map (jshintTask(_, _, _, _, _, _, _, testing = false)),
+    jshintTest <<= (
+      jshintOptions,
       webBrowser,
       unmanagedSources in TestAssets,
       jsFilter,
       parallelism,
       streams,
       reporter
-      ) map (jslintTask(_, _, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, testing = true)),
 
-    test <<= (test in Test).dependsOn(jslint, jslintTest)
+    test <<= (test in Test).dependsOn(jshint, jshintTest)
   )
 
-  private def jslintOptionsTask(state: State): JsObject = {
+  private def jshintOptionsTask(state: State): JsObject = {
     val extracted = Project.extract(state)
     JsObject(List(
       extracted.get(ass).map(v => "ass" -> JsBoolean(v)),
@@ -150,7 +150,7 @@ object Plugin extends sbt.Plugin {
   }
 
   // TODO: This can be abstracted further so that source batches can be determined generally?
-  private def jslintTask(jslintOptions: JsObject,
+  private def jshintTask(jshintOptions: JsObject,
                          browser: ActorRef,
                          unmanagedSources: Seq[File],
                          jsFilter: FileFilter,
@@ -172,7 +172,7 @@ object Plugin extends sbt.Plugin {
     val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
       try {
         val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
-        sourceBatches.map(lintForSources(jslintOptions, browser, _))
+        sourceBatches.map(lintForSources(jshintOptions, browser, _))
       }
 
     val pendingResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
@@ -190,19 +190,19 @@ object Plugin extends sbt.Plugin {
   implicit val webDriverSystem = WebDriverPlugin.webDriverSystem
   implicit val webDriverTimeout = WebDriverPlugin.webDriverTimeout
 
-  private val jslinter = Jslinter()
+  private val jshinter = Jshinter()
 
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
   private def lintForSources(options: JsObject, browser: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
-    jslinter.beginLint(browser).flatMap[Seq[(File, JsArray)]] {
+    jshinter.beginLint(browser).flatMap[Seq[(File, JsArray)]] {
       session =>
         val promisedResults = Seq.fill(sources.size)(Promise[(File, JsArray)]())
         lintNextSource(session, options, sources, promisedResults)
         val allResults = Future.sequence(promisedResults.map(_.future))
         allResults.onComplete {
-          case _ => jslinter.endLint(session)
+          case _ => jshinter.endLint(session)
         }
         allResults
     }
@@ -215,7 +215,7 @@ object Plugin extends sbt.Plugin {
     if (sources.size > 0) {
       val source = sources.head
 
-      jslinter.lint(session, source, options)
+      jshinter.lint(session, source, options)
         .map((source, _))
         .onComplete {
         c =>
@@ -225,9 +225,9 @@ object Plugin extends sbt.Plugin {
     }
   }
 
-  private def logErrors(reporter: LoggerReporter, log: Logger, source: File, jslintErrors: JsArray): Unit = {
+  private def logErrors(reporter: LoggerReporter, log: Logger, source: File, jshintErrors: JsArray): Unit = {
 
-    jslintErrors.elements.map {
+    jshintErrors.elements.map {
       case o: JsObject =>
 
         def getReason(o: JsObject): String = o.fields.get("reason").get.toString()
