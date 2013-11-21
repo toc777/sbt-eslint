@@ -18,7 +18,7 @@ class JshinterSpec extends Specification with NoTimeConversions {
 
 
   "the jshinter" should {
-    "receive source and options" in new TestActorSystem {
+    "receive source and options and find an error" in new TestActorSystem {
       val shellSource = new File(this.getClass.getClassLoader.getResource("shell.js").toURI)
       val jshintSource = new File(this.getClass.getClassLoader.getResource("jshint.js").toURI)
 

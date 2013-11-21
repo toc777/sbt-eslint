@@ -1,24 +1,27 @@
 package com.typesafe.jshint.sbt
 
-import sbt.Keys._
 import sbt._
-import akka.actor.ActorRef
+import sbt.Keys._
+import akka.actor.Props
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Promise, Await, Future}
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import spray.json._
-import com.typesafe.jshint.Jshinter
 import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
 import com.typesafe.js.sbt.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.sbt.JsEnginePlugin
+import scala.Some
+import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
+import scala.collection.immutable
+import com.typesafe.jshint.Jshinter
 
 
 /**
  * The WebDriver sbt plugin plumbing around the JshintEngine
  */
-object Plugin extends sbt.Plugin {
+object JSHintPlugin extends sbt.Plugin {
 
   object JshintKeys {
     val jshint = TaskKey[Unit]("jshint", "Perform JavaScript linting.")
@@ -96,18 +99,20 @@ object Plugin extends sbt.Plugin {
       jshintOptions,
       unmanagedSources in Assets,
       jsFilter,
+      engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
       jshintOptions,
       unmanagedSources in TestAssets,
       jsFilter,
+      engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
   )
@@ -151,34 +156,51 @@ object Plugin extends sbt.Plugin {
   private def jshintTask(jshintOptions: JsObject,
                          unmanagedSources: Seq[File],
                          jsFilter: FileFilter,
+                         engineType: EngineType.Value,
                          parallelism: Int,
                          s: TaskStreams,
                          reporter: LoggerReporter,
                          testing: Boolean
                           ): Unit = {
 
+    import DefaultJsonProtocol._
+
     reporter.reset()
 
-    val sources = (unmanagedSources ** jsFilter).get
+    val sources = (unmanagedSources ** jsFilter).get.to[immutable.Seq]
+
+    val engineProps = engineType match {
+      case EngineType.CommonNode => CommonNode.props()
+      case EngineType.Node => Node.props()
+      case EngineType.PhantomJs => PhantomJs.props()
+      case EngineType.Rhino => Rhino.props()
+    }
 
     val testKeyword = if (testing) "test " else ""
     if (sources.size > 0) {
       s.log.info(s"JavaScript linting on ${sources.size} ${testKeyword}source(s)")
     }
 
-    val resultBatches: Seq[Future[Seq[(File, JsArray)]]] =
+    val resultBatches: immutable.Seq[Future[JsArray]] =
       try {
-        val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).toSeq
-        //sourceBatches.map(lintForSources(jshintOptions, browser, _))
-        Nil
+        val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).to[immutable.Seq]
+        sourceBatches.map(sourceBatch => lintForSources(engineProps, sourceBatch, jshintOptions))
       }
 
-    val pendingResults = Future.sequence(resultBatches).flatMap(rb => Future(rb.flatten))
-    val results = Await.result(pendingResults, 10.seconds)
-    results.foreach {
-      result =>
-        //logErrors(reporter, s.log, result._1, result._2)
+    val pendingResults = Future.sequence(resultBatches)
+    for {
+      allResults <- Await.result(pendingResults, 10.seconds)
+      result <- allResults.elements
+    } {
+      val resultTuple = result.convertTo[JsArray]
+      logErrors(
+        reporter,
+        s.log,
+        file(resultTuple.elements(0).toString()),
+        resultTuple.elements(1).convertTo[JsArray]
+      )
     }
+
     reporter.printSummary()
     if (reporter.hasErrors()) {
       throw new LintingFailedException
@@ -188,39 +210,16 @@ object Plugin extends sbt.Plugin {
   implicit val jseSystem = JsEnginePlugin.jseSystem
   implicit val jseTimeout = JsEnginePlugin.jseTimeout
 
- /* private val jshinter = Jshinter()
+  val shellSource = new File(this.getClass.getClassLoader.getResource("shell.js").toURI)
+  val jshintSource = new File(this.getClass.getClassLoader.getResource("jshint.js").toURI)
 
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
-  private def lintForSources(options: JsObject, browser: ActorRef, sources: Seq[File]): Future[Seq[(File, JsArray)]] = {
-    jshinter.beginLint(browser).flatMap[Seq[(File, JsArray)]] {
-      session =>
-        val promisedResults = Seq.fill(sources.size)(Promise[(File, JsArray)]())
-        lintNextSource(session, options, sources, promisedResults)
-        val allResults = Future.sequence(promisedResults.map(_.future))
-        allResults.onComplete {
-          case _ => jshinter.endLint(session)
-        }
-        allResults
-    }
-  }
-
-  /*
-   * lint the next source in sequence and call again upon completion for the next one after that.
-   */
-  private def lintNextSource(session: ActorRef, options: JsObject, sources: Seq[File], promises: Seq[Promise[(File, JsArray)]]): Unit = {
-    if (sources.size > 0) {
-      val source = sources.head
-
-      jshinter.lint(session, source, options)
-        .map((source, _))
-        .onComplete {
-        c =>
-          lintNextSource(session, options, sources.tail, promises.tail)
-          promises.head.complete(c)
-      }
-    }
+  private def lintForSources(engineProps: Props, sources: immutable.Seq[File], options: JsObject): Future[JsArray] = {
+    val engine = jseSystem.actorOf(engineProps)
+    val jshinter = Jshinter(engine, shellSource, jshintSource)
+    jshinter.lint(sources, options)
   }
 
   private def logErrors(reporter: LoggerReporter, log: Logger, source: File, jshintErrors: JsArray): Unit = {
@@ -268,7 +267,7 @@ object Plugin extends sbt.Plugin {
         }
       case x@_ => log.error(s"Malformed result: $x")
     }
-  }   */
+  }
 }
 
 class LintingFailedException extends RuntimeException("JavaScript linting failed") with FeedbackProvidedException {

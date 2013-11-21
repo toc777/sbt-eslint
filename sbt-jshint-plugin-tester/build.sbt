@@ -1,3 +1,6 @@
-jslintSettings
+jshintSettings
 
-//WebDriverKeys.browserType in Global := WebDriverKeys.BrowserType.PhantomJs
+// FIXME: Increasing beyond one causes problems for Rhino.
+JsEngineKeys.parallelism in Global := 1
+
+//JsEngineKeys.engineType in Global := JsEngineKeys.EngineType.CommonNode
