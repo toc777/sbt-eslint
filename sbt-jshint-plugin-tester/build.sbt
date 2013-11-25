@@ -1,3 +1,3 @@
 jshintSettings
 
-//JsEngineKeys.engineType in Global := JsEngineKeys.EngineType.CommonNode
+//JsEngineKeys.engineType := JsEngineKeys.EngineType.CommonNode

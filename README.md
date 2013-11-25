@@ -16,16 +16,17 @@ src/test/assets/**/*.js sources are linted.
 Options can be specified in accordance with the
 [JSHint website](http://www.jshint.com/) and they share the same set of defaults. To set an option:
 
-    JshintKeys.passfail := Some(true)
+    JshintKeys.asi := Some(true)
 
-By default [HtmlUnit](http://htmlunit.sourceforge.net/) is used as the JavaScript engine entirely within
+By default [Rhino](https://developer.mozilla.org/en/docs/Rhino) is used as the JavaScript engine entirely within
 the JVM requiring no additional downloads.
 [common-node](http://olegp.github.io/common-node//) is supported as a native engine option for fast and native JavaScript execution.
+common-node is [Node](http://nodejs.org/) with library support for [CommonJS](http://wiki.commonjs.org/wiki/CommonJS).
 To use common-node instead of Rhino declare the following in your build file:
 
-    JsEngineKeys.engineType in Global := JsEngineKeys.EngineType.CommonNode
+    JsEngineKeys.engineType := JsEngineKeys.EngineType.CommonNode
 
-CommonNode is required to be available on your shell's path in order for it to be used. To check for its availability
+common-node is required to be available on your shell's path in order for it to be used. To check for its availability
 simply type `common-node`.
 
 &copy; Typesafe Inc., 2013
