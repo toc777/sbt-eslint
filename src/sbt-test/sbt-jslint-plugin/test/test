@@ -1,2 +1,2 @@
-# Lint a valid js file and see that it translates to the target folder
+# Lint an valid js file and see that linting errors are reported.
 > test

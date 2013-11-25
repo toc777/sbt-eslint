@@ -1,1 +1,1 @@
-addSbtPlugin("com.typesafe" % "jshint-sbt-plugin" % sys.props("project.version"))
+addSbtPlugin("com.typesafe" % "sbt-jshint-plugin" % sys.props("project.version"))
