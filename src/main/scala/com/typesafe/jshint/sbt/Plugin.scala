@@ -19,7 +19,7 @@ import com.typesafe.jshint.Jshinter
 
 
 /**
- * The WebDriver sbt plugin plumbing around the JshintEngine
+ * The sbt plugin plumbing around the JSHint library.
  */
 object JSHintPlugin extends sbt.Plugin {
 
@@ -114,6 +114,9 @@ object JSHintPlugin extends sbt.Plugin {
     val passfail = SettingKey[Option[Boolean]]("jshint-passfail", "This option makes JSHint stop on the first error or warning.")
     val white = SettingKey[Option[Boolean]]("jshint-white", "This option make JSHint check your source code against Douglas Crockford's JavaScript coding style.")
 
+    val shellSource = SettingKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
+    val jshintSource = SettingKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
+
   }
 
   import WebKeys._
@@ -191,24 +194,34 @@ object JSHintPlugin extends sbt.Plugin {
 
     jshintOptions <<= state map jshintOptionsTask,
 
+    shellSource := getFileInTarget(target.value, "shell.js"),
+    // FIXME: This resource will eventually be located from its webjar. For now
+    // we use a webjar until the webjar is updated with my fix (waiting for a
+    // new release of jshint).
+    jshintSource := getFileInTarget(target.value, "jshint.js"),
+
     jshint <<= (
-      jshintOptions,
+      shellSource,
+      jshintSource,
       unmanagedSources in Assets,
       jsFilter,
+      jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
-      jshintOptions,
+      shellSource,
+      jshintSource,
       unmanagedSources in TestAssets,
       jsFilter,
+      jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
   )
@@ -287,10 +300,23 @@ object JSHintPlugin extends sbt.Plugin {
     ).flatten)
   }
 
+  def getFileInTarget(target: File, name: String): File = {
+    val is = this.getClass.getClassLoader.getResourceAsStream(name)
+    try {
+      val f = target / this.getClass.getSimpleName / name
+      IO.transfer(is, f)
+      f
+    } finally {
+      is.close()
+    }
+  }
+
   // TODO: This can be abstracted further so that source batches can be determined generally?
-  private def jshintTask(jshintOptions: JsObject,
+  private def jshintTask(shellSource: File,
+                         jshintSource: File,
                          unmanagedSources: Seq[File],
                          jsFilter: FileFilter,
+                         jshintOptions: JsObject,
                          engineType: EngineType.Value,
                          parallelism: Int,
                          s: TaskStreams,
@@ -319,7 +345,7 @@ object JSHintPlugin extends sbt.Plugin {
     val resultBatches: immutable.Seq[Future[JsArray]] =
       try {
         val sourceBatches = (sources grouped Math.max(sources.size / parallelism, 1)).to[immutable.Seq]
-        sourceBatches.map(sourceBatch => lintForSources(engineProps, sourceBatch, jshintOptions))
+        sourceBatches.map(sourceBatch => lintForSources(engineProps, shellSource, jshintSource, sourceBatch, jshintOptions))
       }
 
     val pendingResults = Future.sequence(resultBatches)
@@ -345,13 +371,16 @@ object JSHintPlugin extends sbt.Plugin {
   implicit val jseSystem = JsEnginePlugin.jseSystem
   implicit val jseTimeout = JsEnginePlugin.jseTimeout
 
-  val shellSource = new File(this.getClass.getClassLoader.getResource("shell.js").toURI)
-  val jshintSource = new File(this.getClass.getClassLoader.getResource("jshint.js").toURI)
-
   /*
    * lints a sequence of sources and returns a future representing the results of all.
    */
-  private def lintForSources(engineProps: Props, sources: immutable.Seq[File], options: JsObject): Future[JsArray] = {
+  private def lintForSources(
+                              engineProps: Props,
+                              shellSource: File,
+                              jshintSource: File,
+                              sources: immutable.Seq[File],
+                              options: JsObject
+                              ): Future[JsArray] = {
     val engine = jseSystem.actorOf(engineProps)
     val jshinter = Jshinter(engine, shellSource, jshintSource)
     jshinter.lint(sources, options)
