@@ -261,8 +261,7 @@ object JSHintPlugin extends sbt.Plugin {
               case Left(_) => new FileGraph(Graph.empty[File, DiEdge])
             }
             s2.put(fileGraphAttrKey, fg)
-        }
-        s1
+        } getOrElse (s1)
     }
     s0.put(transformState, nextJsSourceGraphState)
   }
