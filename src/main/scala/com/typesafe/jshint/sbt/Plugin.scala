@@ -2,7 +2,6 @@ package com.typesafe.jshint.sbt
 
 import sbt._
 import sbt.Keys._
-import akka.actor.Props
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -17,10 +16,10 @@ import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
 import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
 import com.typesafe.sbt.web.{FileGraph, ModifiedFiles, PendingFileGraph}
-import java.io.File
 import sbt.File
+import java.security.MessageDigest
+import scalax.collection.edge.LDiEdge
 
 
 /**
@@ -122,18 +121,13 @@ object JSHintPlugin extends sbt.Plugin {
     val shellSource = SettingKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
     val jshintSource = SettingKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
 
-    val nextJsSourceGraph = TaskKey[(FileGraph, Seq[File])]("jshint-next-js-sources", "Return a graph of js source ~> target edges along with a sequence of js source files that have changed for the build.")
-
   }
 
   import WebKeys._
   import JshintKeys._
   import JsEngineKeys._
 
-  private val fileGraphAttrKey = AttributeKey[FileGraph]("file-graph")
-
   def jshintSettings = Seq(
-    onLoad in Global := (onLoad in Global).value andThen load,
 
     bitwise := None,
     camelcase := None,
@@ -211,60 +205,34 @@ object JSHintPlugin extends sbt.Plugin {
     // new release of jshint).
     jshintSource := getFileInTarget(target.value, "jshint.js"),
 
-    nextJsSourceGraph in Assets <<= (
-      state,
-      unmanagedSources in Assets,
-      jsFilter,
-      copyResources in Assets
-      ) map getNextJsSourceGraphTask,
-    nextJsSourceGraph in TestAssets <<= (
-      state,
-      unmanagedSources in TestAssets,
-      jsFilter,
-      copyResources in TestAssets
-      ) map getNextJsSourceGraphTask,
-
     jshint <<= (
       shellSource,
       jshintSource,
-      nextJsSourceGraph in Assets,
+      unmanagedSources in Assets,
+      copyResources in Assets,
+      jsFilter,
       jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map ((ss, js, m, o, et, p, s, r) => jshintTask(ss, js, m._2, o, et, p, s, r, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
       shellSource,
       jshintSource,
-      nextJsSourceGraph in TestAssets,
+      unmanagedSources in TestAssets,
+      copyResources in TestAssets,
+      jsFilter,
       jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map ((ss, js, m, o, et, p, s, r) => jshintTask(ss, js, m._2, o, et, p, s, r, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
 
   )
-
-  private def load(s0: State): State = {
-    def nextJsSourceGraphState = {
-      s1: State =>
-        Project.runTask(nextJsSourceGraph, s1) map {
-          sr: (State, Result[(FileGraph, Seq[File])]) =>
-            val s2 = sr._1
-            val r = sr._2
-            val fg = r.toEither match {
-              case Right(g) => g._1
-              case Left(_) => new FileGraph(Graph.empty[File, DiEdge])
-            }
-            s2.put(fileGraphAttrKey, fg)
-        } getOrElse (s1)
-    }
-    s0.put(transformState, nextJsSourceGraphState)
-  }
 
   private def jshintOptionsTask(state: State): JsObject = {
     val extracted = Project.extract(state)
@@ -340,6 +308,7 @@ object JSHintPlugin extends sbt.Plugin {
     ).flatten)
   }
 
+  // FIXME: Abstract this.
   private def getFileInTarget(target: File, name: String): File = {
     val is = this.getClass.getClassLoader.getResourceAsStream(name)
     try {
@@ -351,20 +320,16 @@ object JSHintPlugin extends sbt.Plugin {
     }
   }
 
-  def getNextJsSourceGraphTask(
-                                state: State,
-                                unmanagedSources: Seq[File],
-                                jsFilter: FileFilter,
-                                copyResources: Seq[(File, File)]
-                                ): (FileGraph, Seq[File]) = {
-    val fg = state.get(fileGraphAttrKey).getOrElse(new FileGraph(Graph.empty[File, DiEdge]))
-    ModifiedFiles(new PendingFileGraph(fg.g, unmanagedSources, jsFilter, copyResources))
-  }
+  private val digester = MessageDigest.getInstance("MD5")
+
+  private def digest(s: String): String = digester.digest(s.getBytes).map("%02X".format(_)).mkString
 
   // TODO: This can be abstracted further so that source batches can be determined generally?
   private def jshintTask(shellSource: File,
                          jshintSource: File,
-                         modifiedJsSources: Seq[File],
+                         unmanagedSources: Seq[File],
+                         copyResources: Seq[(File, File)],
+                         jsFilter: FileFilter,
                          jshintOptions: JsObject,
                          engineType: EngineType.Value,
                          parallelism: Int,
@@ -385,6 +350,22 @@ object JSHintPlugin extends sbt.Plugin {
       case EngineType.PhantomJs => PhantomJs.props()
       case EngineType.Rhino => Rhino.props()
     }
+
+    // FIXME: Retrieve/persist the graph
+    val label = this.getClass.getName
+    val prevSourceGraph = Graph.empty[File, LDiEdge]
+    val taskBuildGraph = Graph.from(
+      Nil,
+      unmanagedSources.map {
+        f => LDiEdge(
+          f,
+          file(digest(f.getCanonicalPath + f.lastModified().toString + jsFilter.toString + jshintOptions + testing.toString))
+        )(label)
+      }
+    )
+    val nextSourceGraph = ModifiedFiles(new PendingFileGraph(label, prevSourceGraph, taskBuildGraph))
+
+    val modifiedJsSources = (nextSourceGraph._2 ** jsFilter).get
 
     val testKeyword = if (testing) "test " else ""
     if (modifiedJsSources.size > 0) {
