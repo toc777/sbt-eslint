@@ -11,15 +11,14 @@ import java.lang.RuntimeException
 import com.typesafe.sbt.web.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.sbt.JsEnginePlugin
-import scala.Some
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
 import scalax.collection.Graph
-import com.typesafe.sbt.web.{FileGraph, ModifiedFiles, PendingFileGraph}
+import com.typesafe.sbt.web._
 import sbt.File
-import java.security.MessageDigest
 import scalax.collection.edge.LDiEdge
+import scala.Some
 
 
 /**
@@ -320,10 +319,6 @@ object JSHintPlugin extends sbt.Plugin {
     }
   }
 
-  private val digester = MessageDigest.getInstance("MD5")
-
-  private def digest(s: String): String = digester.digest(s.getBytes).map("%02X".format(_)).mkString
-
   // TODO: This can be abstracted further so that source batches can be determined generally?
   private def jshintTask(shellSource: File,
                          jshintSource: File,
@@ -353,18 +348,17 @@ object JSHintPlugin extends sbt.Plugin {
 
     // FIXME: Retrieve/persist the graph
     val label = this.getClass.getName
-    val prevSourceGraph = Graph.empty[File, LDiEdge]
+    val prevSourceGraph = Graph.empty[SourceNode, LDiEdge]
     val taskBuildGraph = Graph.from(
       Nil,
       unmanagedSources.map {
         f => LDiEdge(
-          f,
-          file(digest(f.getCanonicalPath + f.lastModified().toString + jsFilter.toString + jshintOptions + testing.toString))
+          SourceFile(f): SourceNode,
+          BuildStamp(f.getCanonicalPath + f.lastModified().toString + jsFilter.toString + jshintOptions + testing.toString)
         )(label)
       }
     )
-    val nextSourceGraph = ModifiedFiles(new PendingFileGraph(label, prevSourceGraph, taskBuildGraph))
-
+    val nextSourceGraph = ModifiedFiles(new AgedSourceFileGraph(prevSourceGraph, taskBuildGraph))
     val modifiedJsSources = (nextSourceGraph._2 ** jsFilter).get
 
     val testKeyword = if (testing) "test " else ""
