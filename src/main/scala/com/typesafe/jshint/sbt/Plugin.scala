@@ -10,7 +10,6 @@ import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
 import com.typesafe.sbt.web.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
-import com.typesafe.jse.sbt.JsEnginePlugin
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
@@ -205,6 +204,7 @@ object JSHintPlugin extends sbt.Plugin {
     jshintSource := getFileInTarget(target.value, "jshint.js"),
 
     jshint <<= (
+      state,
       shellSource,
       jshintSource,
       unmanagedSources in Assets,
@@ -215,8 +215,9 @@ object JSHintPlugin extends sbt.Plugin {
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
+      state,
       shellSource,
       jshintSource,
       unmanagedSources in TestAssets,
@@ -227,7 +228,7 @@ object JSHintPlugin extends sbt.Plugin {
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
 
@@ -320,22 +321,23 @@ object JSHintPlugin extends sbt.Plugin {
   }
 
   // TODO: This can be abstracted further so that source batches can be determined generally?
-  private def jshintTask(shellSource: File,
-                         jshintSource: File,
-                         unmanagedSources: Seq[File],
-                         copyResources: Seq[(File, File)],
-                         jsFilter: FileFilter,
-                         jshintOptions: JsObject,
-                         engineType: EngineType.Value,
-                         parallelism: Int,
-                         s: TaskStreams,
-                         reporter: LoggerReporter,
-                         testing: Boolean
+  private def jshintTask(
+                          state: State,
+                          shellSource: File,
+                          jshintSource: File,
+                          unmanagedSources: Seq[File],
+                          copyResources: Seq[(File, File)],
+                          jsFilter: FileFilter,
+                          jshintOptions: JsObject,
+                          engineType: EngineType.Value,
+                          parallelism: Int,
+                          s: TaskStreams,
+                          reporter: LoggerReporter,
+                          testing: Boolean
                           ): Unit = {
 
     import DefaultJsonProtocol._
-    implicit val jseSystem = JsEnginePlugin.jseSystem
-    implicit val jseTimeout = JsEnginePlugin.jseTimeout
+    import WebPlugin._
 
     reporter.reset()
 
@@ -346,23 +348,21 @@ object JSHintPlugin extends sbt.Plugin {
       case EngineType.Rhino => Rhino.props()
     }
 
-    // FIXME: Retrieve/persist the graph
-    val label = this.getClass.getName
-    val prevSourceGraph = Graph.empty[SourceNode, LDiEdge]
-    val taskBuildGraph = Graph.from(
-      Nil,
-      unmanagedSources.map {
-        f => LDiEdge(
-          SourceFile(f): SourceNode,
-          BuildStamp(f.getCanonicalPath + f.lastModified().toString + jsFilter.toString + jshintOptions + testing.toString)
-        )(label)
-      }
+
+    val taskId = this.getClass.getName
+
+    val buildSettingsDigest = jsFilter.toString + jshintOptions + testing.toString
+
+    val sourceFileManager = new SourceFileManager(s.cacheDirectory / taskId)
+    val jsSources = (unmanagedSources ** jsFilter).get
+    val modifiedJsSources = sourceFileManager.updateBuildStamps(
+      jsSources.map(jsSource => (jsSource, jsSource.lastModified().toString + buildSettingsDigest))
+        .to[immutable.Seq]
     )
-    val nextSourceGraph = ModifiedFiles(new AgedSourceFileGraph(prevSourceGraph, taskBuildGraph))
-    val modifiedJsSources = (nextSourceGraph._2 ** jsFilter).get
 
     val testKeyword = if (testing) "test " else ""
     if (modifiedJsSources.size > 0) {
+      sourceFileManager.save()
       s.log.info(s"JavaScript linting on ${modifiedJsSources.size} ${testKeyword}source(s)")
     }
 
@@ -371,9 +371,12 @@ object JSHintPlugin extends sbt.Plugin {
         val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).to[immutable.Seq]
         sourceBatches.map {
           sourceBatch =>
-            val engine = jseSystem.actorOf(engineProps)
-            val jshinter = Jshinter(engine, shellSource, jshintSource)
-            jshinter.lint(sourceBatch.to[immutable.Seq], jshintOptions)
+            withActorRefFactory(state, taskId) {
+              arf =>
+                val engine = arf.actorOf(engineProps)
+                val jshinter = Jshinter(engine, shellSource, jshintSource)
+                jshinter.lint(sourceBatch.to[immutable.Seq], jshintOptions)
+            }
         }
       }
 
