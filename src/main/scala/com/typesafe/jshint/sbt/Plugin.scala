@@ -353,9 +353,9 @@ object JSHintPlugin extends sbt.Plugin {
 
     val buildSettingsDigest = jsFilter.toString + jshintOptions + testing.toString
 
-    val sourceFileManager = new SourceFileManager(s.cacheDirectory / taskId)
+    val sourceFileManager = SourceFileManager(s.cacheDirectory / taskId)
     val jsSources = (unmanagedSources ** jsFilter).get
-    val modifiedJsSources = sourceFileManager.updateBuildStamps(
+    val modifiedJsSources = sourceFileManager.setAndCompareBuildStamps(
       jsSources.map(jsSource => (jsSource, jsSource.lastModified().toString + buildSettingsDigest))
         .to[immutable.Seq]
     )
