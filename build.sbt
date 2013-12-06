@@ -20,6 +20,8 @@ libraryDependencies ++= Seq(
 
 addSbtPlugin("com.typesafe" % "sbt-js-engine" % "1.0.0-SNAPSHOT")
 
+resolvers += Resolver.sonatypeRepo("snapshots")
+
 scriptedSettings
 
 scriptedLaunchOpts <+= version apply { v => s"-Dproject.version=$v" }
