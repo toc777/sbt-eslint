@@ -14,8 +14,8 @@ import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
 import com.typesafe.sbt.web._
-import sbt.File
 import scala.Some
+import sbt.File
 
 
 /**
@@ -33,6 +33,9 @@ object JSHintPlugin extends sbt.Plugin {
     val config = SettingKey[Option[File]]("jshint-config", "The location of a JSHint configuration file.")
     val resolvedConfig = TaskKey[Option[File]]("jshint-resolved-config", "The actual location of a JSHint configuration file if present. If jshint-config is none then the task will seek a .jshintrc in the project folder. If that's not found then .jshintrc will be searched for in the user's home folder. This behaviour is consistent with other JSHint tooling.")
 
+    val modifiedJsFiles = TaskKey[Seq[File]]("jshint-modified-js-files", "Determine the Js files that are modified.")
+    val modifiedJsTestFiles = TaskKey[Seq[File]]("jshint-modified-js-test-files", "Determine the Js files that are modified for test.")
+
     val shellSource = SettingKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
     val jshintSource = SettingKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
 
@@ -48,6 +51,19 @@ object JSHintPlugin extends sbt.Plugin {
     resolvedConfig <<= (config, baseDirectory) map resolveConfigTask,
     jshintOptions <<= resolvedConfig map jshintOptionsTask,
 
+    modifiedJsFiles <<= (
+      streams,
+      unmanagedSources in Assets,
+      jsFilter,
+      jshintOptions
+      ) map getModifiedJsFilesTask,
+    modifiedJsTestFiles <<= (
+      streams,
+      unmanagedSources in TestAssets,
+      jsTestFilter,
+      jshintOptions
+      ) map getModifiedJsFilesTask,
+
     shellSource := getFileInTarget(target.value, "shell.js"),
     // FIXME: This resource will eventually be located from its webjar. For now
     // we use a webjar until the webjar is updated with my fix (waiting for a
@@ -58,28 +74,24 @@ object JSHintPlugin extends sbt.Plugin {
       state,
       shellSource,
       jshintSource,
-      unmanagedSources in Assets,
-      copyResources in Assets,
-      jsFilter,
+      modifiedJsFiles,
       jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, _, testing = false)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
       state,
       shellSource,
       jshintSource,
-      unmanagedSources in TestAssets,
-      copyResources in TestAssets,
-      jsFilter,
+      modifiedJsTestFiles,
       jshintOptions,
       engineType,
       parallelism,
       streams,
       reporter
-      ) map (jshintTask(_, _, _, _, _, _, _, _, _, _, _, testing = true)),
+      ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = true)),
 
     test <<= (test in Test).dependsOn(jshint, jshintTest)
 
@@ -120,14 +132,25 @@ object JSHintPlugin extends sbt.Plugin {
     }
   }
 
-  // TODO: This can be abstracted further so that source batches can be determined generally?
+  private def getModifiedJsFilesTask(s: TaskStreams, unmanagedSources: Seq[File], jsFilter: FileFilter, jshintOptions: JsObject): Seq[File] = {
+    val sourceFileManager = SourceFileManager(s.cacheDirectory / this.getClass.getName)
+    val jsSources = (unmanagedSources ** jsFilter).get
+    val buildSettingsDigest = jsFilter.toString + jshintOptions
+    val modifiedJsSources = sourceFileManager.setAndCompareBuildStamps(
+      jsSources.map(jsSource => (jsSource, jsSource.lastModified().toString + buildSettingsDigest))
+        .to[immutable.Seq]
+    )
+    if (modifiedJsSources.size > 0) {
+      sourceFileManager.save()
+    }
+    modifiedJsSources
+  }
+
   private def jshintTask(
                           state: State,
                           shellSource: File,
                           jshintSource: File,
-                          unmanagedSources: Seq[File],
-                          copyResources: Seq[(File, File)],
-                          jsFilter: FileFilter,
+                          modifiedJsSources: Seq[File],
                           jshintOptions: JsObject,
                           engineType: EngineType.Value,
                           parallelism: Int,
@@ -149,20 +172,8 @@ object JSHintPlugin extends sbt.Plugin {
     }
 
 
-    val taskId = this.getClass.getName
-
-    val buildSettingsDigest = jsFilter.toString + jshintOptions + testing.toString
-
-    val sourceFileManager = SourceFileManager(s.cacheDirectory / taskId)
-    val jsSources = (unmanagedSources ** jsFilter).get
-    val modifiedJsSources = sourceFileManager.setAndCompareBuildStamps(
-      jsSources.map(jsSource => (jsSource, jsSource.lastModified().toString + buildSettingsDigest))
-        .to[immutable.Seq]
-    )
-
     val testKeyword = if (testing) "test " else ""
     if (modifiedJsSources.size > 0) {
-      sourceFileManager.save()
       s.log.info(s"JavaScript linting on ${modifiedJsSources.size} ${testKeyword}source(s)")
     }
 
@@ -171,7 +182,7 @@ object JSHintPlugin extends sbt.Plugin {
         val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).to[immutable.Seq]
         sourceBatches.map {
           sourceBatch =>
-            withActorRefFactory(state, taskId) {
+            withActorRefFactory(state, this.getClass.getName) {
               arf =>
                 val engine = arf.actorOf(engineProps)
                 val jshinter = Jshinter(engine, shellSource, jshintSource)
