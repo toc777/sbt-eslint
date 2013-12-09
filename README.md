@@ -12,8 +12,8 @@ declare the settings required in your build file. For example, for build.sbt:
 
     JsEnginePlugin.jshintSettings
 
-By default linting occurs as part of your project's `test` task. Both src/main/assets/\*\*/*.js and
-src/test/assets/\**/*.js sources are linted.
+By default linting occurs as part of your project's `test` task. Both src/main/assets/\*\*/\*.js and
+src/test/assets/\*\*/\*.js sources are linted.
 
 Options can be specified in accordance with the
 [JSHint website](http://www.jshint.com/docs) and they share the same set of defaults. To set an option you can
