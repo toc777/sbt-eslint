@@ -14,15 +14,18 @@ By default linting occurs as part of your project's `test` task. Both src/main/a
 src/test/assets/**/*.js sources are linted.
 
 Options can be specified in accordance with the
-[JSHint website](http://www.jshint.com/) and they share the same set of defaults. To set an option:
+[JSHint website](http://www.jshint.com/docs) and they share the same set of defaults. To set an option you can
+provide a `.jshintrc` file within your project's base directory. If there is no such file then a `.jshintrc` file will
+be search for in your home directory. This behaviour can be overridden by using a `config` setting for the plugin.
+`config` is used to specify the location of a configuration file.
 
-    JshintKeys.asi := Some(true)
-
-By default [Rhino](https://developer.mozilla.org/en/docs/Rhino) is used as the JavaScript engine entirely within
+By default [Rhino](https://developer.mozilla.org/en/docs/Rhino) is used as the JavaScript engine and runs entirely within
 the JVM requiring no additional downloads.
 [common-node](http://olegp.github.io/common-node//) is supported as a native engine option for fast and native JavaScript execution.
 common-node is [Node](http://nodejs.org/) with library support for [CommonJS](http://wiki.commonjs.org/wiki/CommonJS).
 To use common-node instead of Rhino declare the following in your build file:
+
+    import com.typesafe.sbt.jse.JsEnginePlugin.JsEngineKeys
 
     JsEngineKeys.engineType := JsEngineKeys.EngineType.CommonNode
 
