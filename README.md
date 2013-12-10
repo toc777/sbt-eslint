@@ -5,8 +5,18 @@ Allows JSHint to be used from within sbt. Builds on com.typesafe:js-engine in or
 along with the scripts to verify. js-engine enables high performance linting given parallelism and native
 JS engine execution.
 
-To use this plugin use the addSbtPlugin command within your project's plugins.sbt (or as a global setting). Then
-declare the settings required in your build file. For example, for build.sbt:
+To use this plugin use the addSbtPlugin command within your project's plugins.sbt (or as a global setting) i.e.:
+
+    resolvers ++= Seq(
+        Resolver.url("sbt snapshot plugins", url("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots"))(Resolver.ivyStylePatterns),
+        Resolver.sonatypeRepo("snapshots"),
+        "Typesafe Snapshots Repository" at "http://repo.typesafe.com/typesafe/snapshots/",
+        "Spray Releases" at "http://repo.spray.io/"
+        )
+
+    addSbtPlugin("com.typesafe" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
+
+Then declare the settings required in your build file. For example, for build.sbt:
 
     import com.typesafe.jshint.sbt.JSHintPlugin
 
