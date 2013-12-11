@@ -54,13 +54,13 @@ object JSHintPlugin extends sbt.Plugin {
     modifiedJsFiles <<= (
       streams,
       unmanagedSources in Assets,
-      jsFilter,
+      jsFilter in Assets,
       jshintOptions
       ) map getModifiedJsFilesTask,
     modifiedJsTestFiles <<= (
       streams,
       unmanagedSources in TestAssets,
-      jsTestFilter,
+      jsFilter in TestAssets,
       jshintOptions
       ) map getModifiedJsFilesTask,
 
