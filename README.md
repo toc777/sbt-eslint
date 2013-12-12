@@ -16,9 +16,16 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
 
     addSbtPlugin("com.typesafe" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
 
-Then declare the settings required in your build file. For example, for build.sbt:
+Then declare the settings required in your build file (JSHintPlugin depends on some other, more generalised settings
+to be defined). For example, for build.sbt:
 
+    import com.typesafe.web.sbt.WebPlugin
+    import com.typesafe.jse.sbt.JsEnginePlugin
     import com.typesafe.jshint.sbt.JSHintPlugin
+
+    webSettings
+
+    jsEngineSettings
 
     JSHintPlugin.jshintSettings
 
