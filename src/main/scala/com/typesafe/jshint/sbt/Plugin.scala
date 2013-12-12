@@ -8,12 +8,12 @@ import scala.concurrent.duration._
 import spray.json._
 import xsbti.{Maybe, Position, Severity}
 import java.lang.RuntimeException
-import com.typesafe.sbt.web.WebPlugin.WebKeys
+import com.typesafe.web.sbt.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
-import com.typesafe.sbt.web._
+import com.typesafe.web.sbt._
 import scala.Some
 import sbt.File
 
@@ -94,7 +94,7 @@ object JSHintPlugin extends sbt.Plugin {
       ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = true)),
 
     compile <<= (compile in Compile).dependsOn(jshint),
-    test <<= (test in Test).dependsOn(jshintTest)
+    test <<= (test in Test).dependsOn(jshint, jshintTest)
 
   )
 
