@@ -1,7 +1,8 @@
 import sbt._
 
+import com.typesafe.web.sbt.WebPlugin
+import com.typesafe.jse.sbt.JsEnginePlugin
 import com.typesafe.jshint.sbt.JSHintPlugin
-import com.typesafe.js.sbt.WebPlugin.WebKeys
 import xsbti.Severity
 
 object TestBuild extends Build {
@@ -25,9 +26,11 @@ object TestBuild extends Build {
     base = file("."),
     settings =
       Project.defaultSettings ++
+        WebPlugin.webSettings ++
+        JsEnginePlugin.jsEngineSettings ++
         JSHintPlugin.jshintSettings ++
         Seq(
-          WebKeys.reporter := TestReporter,
+          WebPlugin.WebKeys.reporter := TestReporter,
           TaskKey[Unit]("check") := {
             val errorCount = TestReporter.count.get(Severity.Error)
             if (errorCount != 2) {
