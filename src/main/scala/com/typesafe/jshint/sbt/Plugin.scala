@@ -93,8 +93,8 @@ object JSHintPlugin extends sbt.Plugin {
       reporter
       ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = true)),
 
-    compile <<= (compile in Compile).dependsOn(jshint),
-    test <<= (test in Test).dependsOn(jshint, jshintTest)
+    compile in Compile <<= (compile in Compile).dependsOn(jshint),
+    test in Test <<= (test in Test).dependsOn(jshint, jshintTest)
 
   )
 
