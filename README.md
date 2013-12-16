@@ -23,9 +23,9 @@ to be defined). For example, for build.sbt:
     import com.typesafe.jse.sbt.JsEnginePlugin
     import com.typesafe.jshint.sbt.JSHintPlugin
 
-    webSettings
+    WebPlugin.webSettings
 
-    jsEngineSettings
+    JsEnginePlugin.jsEngineSettings
 
     JSHintPlugin.jshintSettings
 
