@@ -17,9 +17,7 @@ object TestBuild extends Build {
     def log(level: Level.Value, message: => String): Unit = messages ++= message
   }
 
-  object TestReporter extends LoggerReporter(-1, TestLogger) {
-    override def hasErrors(): Boolean = false
-  }
+  object TestReporter extends LoggerReporter(-1, TestLogger)
 
   lazy val root = Project(
     id = "test-build",
