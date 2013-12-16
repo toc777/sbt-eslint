@@ -6,16 +6,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import spray.json._
-import xsbti.{Maybe, Position, Severity}
-import java.lang.RuntimeException
 import com.typesafe.web.sbt.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
 import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
 import com.typesafe.web.sbt._
-import scala.Some
 import sbt.File
+import scala.Some
+import xsbti.{CompileFailed, Severity, Problem}
 
 
 /**
@@ -193,73 +192,52 @@ object JSHintPlugin extends sbt.Plugin {
       }
 
     val pendingResults = Future.sequence(resultBatches)
-    for {
+    val allProblems: immutable.Seq[Problem] = (for {
       allResults <- Await.result(pendingResults, 10.seconds)
       result <- allResults.elements
-    } {
+    } yield {
       val resultTuple = result.convertTo[JsArray]
-      logErrors(
-        reporter,
-        s.log,
-        file(resultTuple.elements(0).toString()),
-        resultTuple.elements(1).convertTo[JsArray]
-      )
-    }
+      val source = file(resultTuple.elements(0).convertTo[String])
+      resultTuple.elements(1).convertTo[JsArray].elements.map {
+        case o: JsObject =>
+          def getReason(o: JsObject): String = o.fields.get("reason").get.toString()
 
-    reporter.printSummary()
-    if (reporter.hasErrors()) {
-      throw new LintingFailedException
-    }
-  }
+          def lineBasedProblem(o: JsObject, s: Severity): Problem =
+            new LineBasedProblem(
+              getReason(o),
+              s,
+              java.lang.Double.parseDouble(o.fields.get("line").get.toString()).toInt,
+              java.lang.Double.parseDouble(o.fields.get("character").get.toString()).toInt - 1,
+              o.fields.get("evidence") match {
+                case Some(JsString(line)) => line
+                case _ => ""
+              },
+              source
+            )
 
-  private def logErrors(reporter: LoggerReporter, log: Logger, source: File, jshintErrors: JsArray): Unit = {
-
-    jshintErrors.elements.map {
-      case o: JsObject =>
-
-        def getReason(o: JsObject): String = o.fields.get("reason").get.toString()
-
-        def logWithSeverity(o: JsObject, s: Severity): Unit = {
-          val p = new Position {
-            def line(): Maybe[Integer] =
-              Maybe.just(java.lang.Double.parseDouble(o.fields.get("line").get.toString()).toInt)
-
-            def lineContent(): String = o.fields.get("evidence") match {
-              case Some(JsString(line)) => line
-              case _ => ""
-            }
-
-            def offset(): Maybe[Integer] =
-              Maybe.just(java.lang.Double.parseDouble(o.fields.get("character").get.toString()).toInt - 1)
-
-            def pointer(): Maybe[Integer] = offset()
-
-            def pointerSpace(): Maybe[String] = Maybe.just(
-              lineContent().take(pointer().get).map {
-                case '\t' => '\t'
-                case x => ' '
-              })
-
-            def sourcePath(): Maybe[String] = Maybe.just(source.getPath)
-
-            def sourceFile(): Maybe[File] = Maybe.just(source)
+          o.fields.get("id") match {
+            case Some(JsString("(error)")) => lineBasedProblem(o, Severity.Error)
+            case Some(JsString("(info)")) => lineBasedProblem(o, Severity.Info)
+            case Some(JsString("(warn)")) => lineBasedProblem(o, Severity.Warn)
+            case Some(id@_) => new GeneralProblem(s"Unknown type of error: $id with reason: ${getReason(o)}", source)
+            case _ => new GeneralProblem(s"Malformed error with reason: ${getReason(o)}", source)
           }
-          val r = getReason(o)
-          reporter.log(p, r, s)
-        }
+        case x@_ => new GeneralProblem(s"Malformed result: $x", source)
+      }.to[immutable.Seq]
+    }).flatten
 
-        o.fields.get("id") match {
-          case Some(JsString("(error)")) => logWithSeverity(o, Severity.Error)
-          case Some(JsString("(info)")) => logWithSeverity(o, Severity.Info)
-          case Some(JsString("(warn)")) => logWithSeverity(o, Severity.Warn)
-          case Some(id@_) => log.error(s"Unknown type of error: $id with reason: ${getReason(o)}")
-          case _ => log.error(s"Malformed error with reason: ${getReason(o)}")
-        }
-      case x@_ => log.error(s"Malformed result: $x")
-    }
+    allProblems.foreach(p => reporter.log(p.position(), p.message(), p.severity()))
+    reporter.printSummary()
+    allProblems.find(_.severity() == Severity.Error).foreach(throw new LintingFailedException(allProblems.toArray))
   }
+
 }
 
-class LintingFailedException extends RuntimeException("JavaScript linting failed") with FeedbackProvidedException {
-  override def toString = getMessage
+
+class LintingFailedException(override val problems: Array[Problem])
+  extends CompileFailed
+  with FeedbackProvidedException {
+
+  override val arguments: Array[String] = Array.empty
 }
+
