@@ -228,7 +228,7 @@ object JSHintPlugin extends sbt.Plugin {
 
     allProblems.foreach(p => reporter.log(p.position(), p.message(), p.severity()))
     reporter.printSummary()
-    allProblems.find(_.severity() == Severity.Error).foreach(throw new LintingFailedException(allProblems.toArray))
+    allProblems.find(_.severity() == Severity.Error).foreach(_ => throw new LintingFailedException(allProblems.toArray))
   }
 
 }
