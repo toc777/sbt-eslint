@@ -14,6 +14,7 @@ import com.typesafe.web.sbt._
 import sbt.File
 import scala.Some
 import xsbti.{CompileFailed, Severity, Problem}
+import akka.util.Timeout
 
 
 /**
@@ -153,6 +154,9 @@ object JSHintPlugin extends sbt.Plugin {
 
     import DefaultJsonProtocol._
     import WebPlugin._
+
+    // FIXME: Should be made configurable.
+    implicit val timeout = Timeout(1.hour)
 
     reporter.reset()
 
