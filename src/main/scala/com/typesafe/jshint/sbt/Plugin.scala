@@ -35,8 +35,8 @@ object JSHintPlugin extends sbt.Plugin {
     val modifiedJsFiles = TaskKey[Seq[File]]("jshint-modified-js-files", "Determine the Js files that are modified.")
     val modifiedJsTestFiles = TaskKey[Seq[File]]("jshint-modified-js-test-files", "Determine the Js files that are modified for test.")
 
-    val shellSource = SettingKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
-    val jshintSource = SettingKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
+    val shellSource = TaskKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
+    val jshintSource = TaskKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
 
   }
 
@@ -122,13 +122,17 @@ object JSHintPlugin extends sbt.Plugin {
 
   // FIXME: Abstract this into sbt-web?
   private def getFileInTarget(target: File, name: String): File = {
-    val is = this.getClass.getClassLoader.getResourceAsStream(name)
-    try {
-      val f = target / this.getClass.getSimpleName / name
-      IO.transfer(is, f)
+    val f = target / this.getClass.getSimpleName / name
+    if (!f.exists()) {
+      val is = this.getClass.getClassLoader.getResourceAsStream(name)
+      try {
+        IO.transfer(is, f)
+        f
+      } finally {
+        is.close()
+      }
+    } else {
       f
-    } finally {
-      is.close()
     }
   }
 
