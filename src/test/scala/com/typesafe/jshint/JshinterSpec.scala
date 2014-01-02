@@ -10,7 +10,6 @@ import spray.json.{JsBoolean, JsArray, JsObject}
 import java.io.File
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-import scala.collection.immutable
 import com.typesafe.jse.Rhino
 import akka.actor.ActorSystem
 
@@ -31,7 +30,7 @@ class JshinterSpec extends Specification with NoTimeConversions {
   "the jshinter" should {
     "receive source with no options and find an error" in new TestActorSystem {
       val fileToLint = new File(this.getClass.getResource("some.js").toURI)
-      val filesToLint = immutable.Seq(fileToLint)
+      val filesToLint = Seq(fileToLint)
       val options = JsObject()
 
       val futureResult: Future[JsArray] = jshinterTester.lint(filesToLint, options)
@@ -45,7 +44,7 @@ class JshinterSpec extends Specification with NoTimeConversions {
 
     "receive source and options and not find an error" in new TestActorSystem {
       val fileToLint = new File(this.getClass.getResource("some.js").toURI)
-      val filesToLint = immutable.Seq(fileToLint)
+      val filesToLint = Seq(fileToLint)
       val options = JsObject("asi" -> JsBoolean(true))
 
       val futureResult: Future[JsArray] = jshinterTester.lint(filesToLint, options)

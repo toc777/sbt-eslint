@@ -9,7 +9,6 @@ import spray.json._
 import com.typesafe.web.sbt.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
-import scala.collection.immutable
 import com.typesafe.jshint.Jshinter
 import com.typesafe.web.sbt._
 import sbt.File
@@ -136,19 +135,8 @@ object JSHintPlugin extends sbt.Plugin {
     }
   }
 
-  private def getModifiedJsFilesTask(s: TaskStreams, unmanagedSources: Seq[File], jsFilter: FileFilter, jshintOptions: JsObject): Seq[File] = {
-    val sourceFileManager = SourceFileManager(s.cacheDirectory / this.getClass.getName)
-    val jsSources = (unmanagedSources ** jsFilter).get
-    val buildSettingsDigest = jsFilter.toString + jshintOptions
-    val modifiedJsSources = sourceFileManager.setAndCompareBuildStamps(
-      jsSources.map(jsSource => (jsSource, jsSource.lastModified().toString + buildSettingsDigest))
-        .to[immutable.Seq]
-    )
-    if (modifiedJsSources.size > 0) {
-      sourceFileManager.save()
-    }
-    modifiedJsSources
-  }
+  private def getModifiedJsFilesTask(s: TaskStreams, unmanagedSources: Seq[File], jsFilter: FileFilter, jshintOptions: JsObject): Seq[File] =
+    (unmanagedSources ** jsFilter).get
 
   private def jshintTask(
                           state: State,
@@ -181,22 +169,22 @@ object JSHintPlugin extends sbt.Plugin {
       s.log.info(s"JavaScript linting on ${modifiedJsSources.size} ${testKeyword}source(s)")
     }
 
-    val resultBatches: immutable.Seq[Future[JsArray]] =
+    val resultBatches: Seq[Future[JsArray]] =
       try {
-        val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).to[immutable.Seq]
+        val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).toSeq
         sourceBatches.map {
           sourceBatch =>
             withActorRefFactory(state, this.getClass.getName) {
               arf =>
                 val engine = arf.actorOf(engineProps)
                 val jshinter = Jshinter(engine, shellSource, jshintSource)
-                jshinter.lint(sourceBatch.to[immutable.Seq], jshintOptions)
+                jshinter.lint(sourceBatch, jshintOptions)
             }
         }
       }
 
     val pendingResults = Future.sequence(resultBatches)
-    val allProblems: immutable.Seq[Problem] = (for {
+    val allProblems: Seq[Problem] = (for {
       allResults <- Await.result(pendingResults, 10.seconds)
       result <- allResults.elements
     } yield {
@@ -227,7 +215,7 @@ object JSHintPlugin extends sbt.Plugin {
             case _ => new GeneralProblem(s"Malformed error with reason: ${getReason(o)}", source)
           }
         case x@_ => new GeneralProblem(s"Malformed result: $x", source)
-      }.to[immutable.Seq]
+      }
     }).flatten
 
     allProblems.foreach(p => reporter.log(p.position(), p.message(), p.severity()))

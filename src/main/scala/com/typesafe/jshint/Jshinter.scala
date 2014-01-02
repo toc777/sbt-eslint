@@ -5,11 +5,11 @@ import akka.util.Timeout
 import scala.concurrent.{ExecutionContext, Future}
 import spray.json._
 import DefaultJsonProtocol._
-import scala.collection.immutable
 import akka.actor.ActorRef
 import akka.pattern.ask
 import com.typesafe.jse.Engine
 import com.typesafe.jse.Engine.JsExecutionResult
+import scala.collection.immutable
 
 /**
  * This is the main service that performs the linting functionality of the plugin.  Linting is performed
@@ -33,7 +33,7 @@ class Jshinter(engine: ActorRef, shellSource: File, jshint: File) {
    *         c         : The third detail
    *         d         : The fourth detail
    */
-  def lint(filesToLint: immutable.Seq[File], options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
+  def lint(filesToLint: Seq[File], options: JsObject)(implicit timeout: Timeout): Future[JsArray] = {
 
     import ExecutionContext.Implicits.global
 
