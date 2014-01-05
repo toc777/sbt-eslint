@@ -10,20 +10,21 @@ import spray.json.{JsBoolean, JsArray, JsObject}
 import java.io.File
 import scala.concurrent.{Await, Future}
 import scala.util.Success
-import com.typesafe.jse.Rhino
+import com.typesafe.jse.Trireme
 import akka.actor.ActorSystem
+import scala.collection.immutable
 
 @RunWith(classOf[JUnitRunner])
 class JshinterSpec extends Specification with NoTimeConversions {
 
   def jshinterTester(implicit system: ActorSystem): Jshinter = {
     val shellSource = new File(this.getClass.getClassLoader.getResource("shell.js").toURI)
-    val jshintSource = new File(this.getClass.getClassLoader.getResource("jshint.js").toURI)
-    val engine = system.actorOf(Rhino.props(), "engine")
-    Jshinter(engine, shellSource, jshintSource)
+    val nodeModules = new File(this.getClass.getResource("node_modules").toURI)
+    val engine = system.actorOf(Trireme.props(stdModulePaths = immutable.Seq(nodeModules.getCanonicalPath)), "engine")
+    new Jshinter(engine, shellSource)
   }
 
-  implicit val timeout = Timeout(5.seconds)
+  implicit val timeout = Timeout(15.seconds)
 
   sequential
 

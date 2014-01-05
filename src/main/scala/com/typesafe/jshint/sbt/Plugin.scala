@@ -8,13 +8,14 @@ import scala.concurrent.duration._
 import spray.json._
 import com.typesafe.web.sbt.WebPlugin.WebKeys
 import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
-import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode}
+import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode, Trireme}
 import com.typesafe.jshint.Jshinter
 import com.typesafe.web.sbt._
-import sbt.File
 import scala.Some
 import xsbti.{CompileFailed, Severity, Problem}
 import akka.util.Timeout
+import org.webjars.WebJarExtractor
+import scala.collection.immutable
 
 
 /**
@@ -32,11 +33,10 @@ object JSHintPlugin extends sbt.Plugin {
     val config = SettingKey[Option[File]]("jshint-config", "The location of a JSHint configuration file.")
     val resolvedConfig = TaskKey[Option[File]]("jshint-resolved-config", "The actual location of a JSHint configuration file if present. If jshint-config is none then the task will seek a .jshintrc in the project folder. If that's not found then .jshintrc will be searched for in the user's home folder. This behaviour is consistent with other JSHint tooling.")
 
-    val modifiedJsFiles = TaskKey[Seq[File]]("jshint-modified-js-files", "Determine the Js files that are modified.")
-    val modifiedJsTestFiles = TaskKey[Seq[File]]("jshint-modified-js-test-files", "Determine the Js files that are modified for test.")
+    val jsFiles = TaskKey[Seq[File]]("jshint-js-files", "Determine the Js files.")
+    val jsTestFiles = TaskKey[Seq[File]]("jshint-js-test-files", "Determine the Js files for test.")
 
     val shellSource = TaskKey[File]("jshint-shelljs-source", "The target location of the js shell script to use.")
-    val jshintSource = TaskKey[File]("jshint-jshintjs-source", "The target location of the jshint script to use.")
 
   }
 
@@ -50,30 +50,16 @@ object JSHintPlugin extends sbt.Plugin {
     resolvedConfig <<= (config, baseDirectory) map resolveConfigTask,
     jshintOptions <<= resolvedConfig map jshintOptionsTask,
 
-    modifiedJsFiles <<= (
-      streams,
-      unmanagedSources in Assets,
-      jsFilter in Assets,
-      jshintOptions
-      ) map getModifiedJsFilesTask,
-    modifiedJsTestFiles <<= (
-      streams,
-      unmanagedSources in TestAssets,
-      jsFilter in TestAssets,
-      jshintOptions
-      ) map getModifiedJsFilesTask,
+    jsFiles := ((unmanagedSources in Assets).value ** (jsFilter in Assets).value).get,
+    jsTestFiles := ((unmanagedSources in TestAssets).value ** (jsFilter in TestAssets).value).get,
 
-    shellSource := getFileInTarget(target.value, "shell.js"),
-    // FIXME: This resource will eventually be located from its webjar. For now
-    // we use a webjar until the webjar is updated with my fix (waiting for a
-    // new release of jshint).
-    jshintSource := getFileInTarget(target.value, "jshint.js"),
+    shellSource in jshint <<= (target in LocalRootProject) map copyShellSourceTask,
 
     jshint <<= (
       state,
-      shellSource,
-      jshintSource,
-      modifiedJsFiles,
+      shellSource in jshint,
+      nodeModules in Plugin,
+      jsFiles,
       jshintOptions,
       engineType,
       parallelism,
@@ -82,9 +68,9 @@ object JSHintPlugin extends sbt.Plugin {
       ) map (jshintTask(_, _, _, _, _, _, _, _, _, testing = false)),
     jshintTest <<= (
       state,
-      shellSource,
-      jshintSource,
-      modifiedJsTestFiles,
+      shellSource in jshint,
+      nodeModules in Plugin,
+      jsTestFiles,
       jshintOptions,
       engineType,
       parallelism,
@@ -120,29 +106,18 @@ object JSHintPlugin extends sbt.Plugin {
       .getOrElse(JsObject())
   }
 
-  // FIXME: Abstract this into sbt-web?
-  private def getFileInTarget(target: File, name: String): File = {
-    val f = target / this.getClass.getSimpleName / name
-    if (!f.exists()) {
-      val is = this.getClass.getClassLoader.getResourceAsStream(name)
-      try {
-        IO.transfer(is, f)
-        f
-      } finally {
-        is.close()
-      }
-    } else {
-      f
-    }
+  private def copyShellSourceTask(target: File): File = {
+    WebPlugin.copyResourceTo(
+      target / "jshint-plugin",
+      "shell.js",
+      JSHintPlugin.getClass.getClassLoader
+    )
   }
-
-  private def getModifiedJsFilesTask(s: TaskStreams, unmanagedSources: Seq[File], jsFilter: FileFilter, jshintOptions: JsObject): Seq[File] =
-    (unmanagedSources ** jsFilter).get
 
   private def jshintTask(
                           state: State,
                           shellSource: File,
-                          jshintSource: File,
+                          nodeModules: File,
                           modifiedJsSources: Seq[File],
                           jshintOptions: JsObject,
                           engineType: EngineType.Value,
@@ -162,9 +137,10 @@ object JSHintPlugin extends sbt.Plugin {
 
     val engineProps = engineType match {
       case EngineType.CommonNode => CommonNode.props()
-      case EngineType.Node => Node.props()
+      case EngineType.Node => Node.props(stdModulePaths = immutable.Seq(nodeModules.getCanonicalPath))
       case EngineType.PhantomJs => PhantomJs.props()
       case EngineType.Rhino => Rhino.props()
+      case EngineType.Trireme => Trireme.props(stdModulePaths = immutable.Seq(nodeModules.getCanonicalPath))
     }
 
 
@@ -181,7 +157,7 @@ object JSHintPlugin extends sbt.Plugin {
             withActorRefFactory(state, this.getClass.getName) {
               arf =>
                 val engine = arf.actorOf(engineProps)
-                val jshinter = Jshinter(engine, shellSource, jshintSource)
+                val jshinter = new Jshinter(engine, shellSource)
                 jshinter.lint(sourceBatch, jshintOptions)
             }
         }
