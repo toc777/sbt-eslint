@@ -32,28 +32,30 @@ class JshinterSpec extends Specification with NoTimeConversions {
     "receive source with no options and find an error" in new TestActorSystem {
       val fileToLint = new File(this.getClass.getResource("some.js").toURI)
       val filesToLint = Seq(fileToLint)
-      val options = JsObject()
+      val options = JsObject().toString()
 
-      val futureResult: Future[JsArray] = jshinterTester.lint(filesToLint, options)
+      val futureResult: Future[Seq[(File, Seq[JshintError])]] = jshinterTester.lint(filesToLint, options)
 
       Await.result(futureResult, timeout.duration)
-      val Success(result: JsArray) = futureResult.value.get
+      val Success(result: Seq[(File, Seq[JshintError])]) = futureResult.value.get
 
-      result.elements.size must_== 1
-      result.elements(0).toString() must_== s"""["${fileToLint.getCanonicalPath}",[{"id":"(error)","raw":"Missing semicolon.","code":"W033","evidence":"var a = 1","line":1,"character":10,"scope":"(main)","reason":"Missing semicolon."}]]"""
+      result.size must_== 1
+      result(0).toString() must_== s"""(${fileToLint.getCanonicalPath},List(JshintError((error),1,10,Missing semicolon.,var a = 1,Missing semicolon.,None,None,None,None)))"""
     }
 
     "receive source and options and not find an error" in new TestActorSystem {
       val fileToLint = new File(this.getClass.getResource("some.js").toURI)
       val filesToLint = Seq(fileToLint)
-      val options = JsObject("asi" -> JsBoolean(true))
+      val options = JsObject("asi" -> JsBoolean(true)).toString()
 
-      val futureResult: Future[JsArray] = jshinterTester.lint(filesToLint, options)
+      val futureResult: Future[Seq[(File, Seq[JshintError])]] = jshinterTester.lint(filesToLint, options)
 
       Await.result(futureResult, timeout.duration)
-      val Success(result: JsArray) = futureResult.value.get
+      val Success(result: Seq[(File, Seq[JshintError])]) = futureResult.value.get
 
-      result.elements.size must_== 0
+      result.size must_== 1
+      result(0)._1 must_== fileToLint
+      result(0)._2.size must_== 0
     }
   }
 }

@@ -30,19 +30,18 @@
     console.log("[");
     var sourceFilePaths = JSON.parse(args[SOURCE_FILE_PATHS_ARG]);
     var sourceFilesToProcess = sourceFilePaths.length;
-    var errorReported = false;
+    var resultReported = false;
     sourceFilePaths.forEach(function (sourceFilePath) {
         fs.readFile(sourceFilePath, "utf8", function (e, source) {
             if (e) {
                 console.error("Error while trying to read " + source, e);
             } else {
-                if (!jshint.JSHINT(source, options)) {
-                    if (errorReported) {
-                        console.log(",");
-                    }
-                    console.log(JSON.stringify([sourceFilePath, jshint.JSHINT.errors]));
-                    errorReported = true;
+                var status = jshint.JSHINT(source, options);
+                if (resultReported) {
+                    console.log(",");
                 }
+                console.log(JSON.stringify([sourceFilePath, (status === 0 ? [] : jshint.JSHINT.errors)]));
+                resultReported = true;
             }
             if (--sourceFilesToProcess === 0) {
                 console.log("]");
