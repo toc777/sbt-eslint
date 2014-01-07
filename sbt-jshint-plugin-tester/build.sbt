@@ -4,4 +4,4 @@ jsEngineSettings
 
 jshintSettings
 
-//JsEngineKeys.engineType := JsEngineKeys.EngineType.CommonNode
+//JsEngineKeys.engineType := JsEngineKeys.EngineType.Node

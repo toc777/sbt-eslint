@@ -15,8 +15,10 @@ import scala.collection.immutable
  * This is the main service that performs the linting functionality of the plugin.  Linting is performed
  * using the js-engine service. There is no dependency on sbt and so there is the potential for this to be factored
  * out into its own library and used with other build tools such as Gradle or Maven.
- */
-class Jshinter(engine: ActorRef, shellSource: File, jshint: File) {
+ * @param engine the JS engine actor properties.
+ * @param shellSource the location of js that will process the arguments provided and output results.
+ **/
+class Jshinter(engine: ActorRef, shellSource: File) {
 
   /**
    * Perform Jshint on a sequence of files
@@ -38,11 +40,13 @@ class Jshinter(engine: ActorRef, shellSource: File, jshint: File) {
     import ExecutionContext.Implicits.global
 
     val args = immutable.Seq(
-      jshint.getCanonicalPath,
       JsArray(filesToLint.map(x => JsString(x.getCanonicalPath)).toList).toString(),
       options.toString()
     )
-    (engine ? Engine.ExecuteJs(shellSource, args)).mapTo[JsExecutionResult].flatMap {
+    (engine ? Engine.ExecuteJs(
+      shellSource,
+      args
+    )).mapTo[JsExecutionResult].flatMap {
       result =>
         if (result.exitValue != 0) {
           throw new JshinterFailure(new String(result.error.toArray, "UTF-8"))
@@ -51,19 +55,6 @@ class Jshinter(engine: ActorRef, shellSource: File, jshint: File) {
         val p = JsonParser(new String(result.output.toArray, "UTF-8"))
         Future(p.convertTo[JsArray])
     }
-  }
-}
-
-object Jshinter {
-
-  /**
-   * @param engine the JS engine actor properties.
-   * @param shellSource the location of js that will process the arguments provided and output results.
-   * @param jshintFile The jshint.js file.
-   * @return a new linter.
-   */
-  def apply(engine: ActorRef, shellSource: File, jshintFile: File): Jshinter = {
-    new Jshinter(engine, shellSource, jshintFile)
   }
 }
 
