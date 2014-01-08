@@ -171,7 +171,6 @@ object JSHintPlugin extends sbt.Plugin {
         } yield {
           val source = result._1
           val errors = result._2
-          println(opInputHasher.hash(source))
           val problems = errors.map {
             e =>
               val severity = e.id match {
