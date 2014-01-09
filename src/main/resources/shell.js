@@ -1,7 +1,7 @@
 /*global process, require */
 
 /*
- * Lint files. Direct support is provided for common-node and Rhino.
+ * Lint a number of files.
  *
  * Arguments:
  * 0 - name given to the command invoking the script (unused)
