@@ -144,59 +144,63 @@ object JSHintPlugin extends sbt.Plugin {
     val problems: Seq[Problem] = incremental.runIncremental(s.cacheDirectory, jsSources) {
       modifiedJsSources: Seq[File] =>
 
-        val testKeyword = if (testing) "test " else ""
         if (modifiedJsSources.size > 0) {
-          s.log.info(s"JavaScript linting on ${modifiedJsSources.size} ${testKeyword}source(s)")
-        }
 
-        val resultBatches: Seq[Future[Seq[(File, Seq[JshintError])]]] =
-          try {
-            val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).toSeq
-            sourceBatches.map {
-              sourceBatch =>
-                implicit val timeout = Timeout(timeoutPerSource * sourceBatch.size)
-                withActorRefFactory(state, this.getClass.getName) {
-                  arf =>
-                    val engine = arf.actorOf(engineProps)
-                    val jshinter = new Jshinter(engine, shellSource)
-                    jshinter.lint(sourceBatch, jshintOptions)
+          val testKeyword = if (testing) "test " else ""
+          s.log.info(s"JavaScript linting on ${modifiedJsSources.size} ${testKeyword}source(s)")
+
+          val resultBatches: Seq[Future[Seq[(File, Seq[JshintError])]]] =
+            try {
+              val sourceBatches = (modifiedJsSources grouped Math.max(modifiedJsSources.size / parallelism, 1)).toSeq
+              sourceBatches.map {
+                sourceBatch =>
+                  implicit val timeout = Timeout(timeoutPerSource * sourceBatch.size)
+                  withActorRefFactory(state, this.getClass.getName) {
+                    arf =>
+                      val engine = arf.actorOf(engineProps)
+                      val jshinter = new Jshinter(engine, shellSource)
+                      jshinter.lint(sourceBatch, jshintOptions)
+                  }
+              }
+            }
+
+          val pendingResults = Future.sequence(resultBatches)
+          val problemMappings: Map[File, Seq[Problem]] = (for {
+            allResults <- Await.result(pendingResults, timeoutPerSource * modifiedJsSources.size)
+            result <- allResults
+          } yield {
+            val source = result._1
+            val errors = result._2
+            val problems = errors.map {
+              e =>
+                val severity = e.id match {
+                  case "(error)" => Some(Severity.Error)
+                  case "(info)" => Some(Severity.Info)
+                  case "(warn)" => Some(Severity.Warn)
+                  case _ => None
+                }
+                severity match {
+                  case Some(s) => new LineBasedProblem(e.reason, s, e.line, e.character - 1, e.evidence, source)
+                  case _ => new GeneralProblem(s"Unknown type of error: $e.id with reason: ${e.reason}", source)
                 }
             }
-          }
+            (source, problems)
+          }).toMap
 
-        val pendingResults = Future.sequence(resultBatches)
-        val problemMappings: Map[File, Seq[Problem]] = (for {
-          allResults <- Await.result(pendingResults, timeoutPerSource * modifiedJsSources.size)
-          result <- allResults
-        } yield {
-          val source = result._1
-          val errors = result._2
-          val problems = errors.map {
-            e =>
-              val severity = e.id match {
-                case "(error)" => Some(Severity.Error)
-                case "(info)" => Some(Severity.Info)
-                case "(warn)" => Some(Severity.Warn)
-                case _ => None
-              }
-              severity match {
-                case Some(s) => new LineBasedProblem(e.reason, s, e.line, e.character - 1, e.evidence, source)
-                case _ => new GeneralProblem(s"Unknown type of error: $e.id with reason: ${e.reason}", source)
-              }
+          val results: Map[File, OpResult] = problemMappings.map {
+            (entry) =>
+              val source = entry._1
+              val problems = entry._2
+              val result = if (problems.isEmpty) OpSuccess(Set(source), Set.empty) else OpFailure
+              source -> result
           }
-          (source, problems)
-        }).toMap
+          val problems = problemMappings.values.toSeq.flatten
 
-        val results: Map[File, OpResult] = problemMappings.map {
-          (entry) =>
-            val source = entry._1
-            val problems = entry._2
-            val result = if (problems.isEmpty) OpSuccess(Set(source), Set.empty) else OpFailure
-            source -> result
+          (results, problems)
+
+        } else {
+          (Map.empty, Seq.empty)
         }
-        val problems = problemMappings.values.toSeq.flatten
-
-        (results, problems)
     }
 
     CompileProblems.report(reporter, problems)
