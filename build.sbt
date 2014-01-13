@@ -18,7 +18,7 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.2.3",
   "io.spray" %% "spray-json" % "1.2.5",
-  "org.webjars" % "jshint" % "2.4.1",
+  "org.webjars" % "jshint-node" % "2.4.1-1",
   "org.specs2" %% "specs2" % "2.2.2" % "test",
   "junit" % "junit" % "4.11" % "test",
   "com.typesafe.akka" %% "akka-testkit" % "2.2.3" % "test"
