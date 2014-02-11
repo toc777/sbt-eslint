@@ -1,6 +1,6 @@
 sbtPlugin := true
 
-organization := "com.typesafe"
+organization := "com.typesafe.sbt"
 
 name := "sbt-jshint-plugin"
 
@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % "2.2.3" % "test"
 )
 
-addSbtPlugin("com.typesafe" % "sbt-js-engine" % "1.0.0-M1")
+addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.0.0-SNAPSHOT")
 
 scriptedSettings
 

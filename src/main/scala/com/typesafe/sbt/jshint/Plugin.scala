@@ -1,26 +1,26 @@
-package com.typesafe.jshint.sbt
+package com.typesafe.sbt.jshint
 
 import sbt._
 import sbt.Keys._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.typesafe.web.sbt.WebPlugin.WebKeys
-import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
+import com.typesafe.sbt.web.SbtWebPlugin.WebKeys
+import com.typesafe.sbt.jse.SbtJsEnginePlugin.JsEngineKeys
 import com.typesafe.jse.{Rhino, PhantomJs, Node, CommonNode, Trireme}
 import com.typesafe.jshint.{JshintError, Jshinter}
-import com.typesafe.web.sbt._
+import com.typesafe.sbt.web._
 import xsbti.{CompileFailed, Severity, Problem}
 import akka.util.Timeout
 import scala.collection.immutable
-import com.typesafe.web.sbt.incremental._
+import com.typesafe.sbt.web.incremental._
 import scala.Some
 
 
 /**
  * The sbt plugin plumbing around the JSHint library.
  */
-object JSHintPlugin extends sbt.Plugin {
+object SbtJSHintPlugin extends sbt.Plugin {
 
   object JshintKeys {
 
@@ -106,10 +106,10 @@ object JSHintPlugin extends sbt.Plugin {
   }
 
   private def copyShellSourceTask(target: File): File = {
-    WebPlugin.copyResourceTo(
+    SbtWebPlugin.copyResourceTo(
       target / "jshint-plugin",
       "shell.js",
-      JSHintPlugin.getClass.getClassLoader
+      SbtJSHintPlugin.getClass.getClassLoader
     )
   }
 
@@ -126,7 +126,7 @@ object JSHintPlugin extends sbt.Plugin {
                           testing: Boolean
                           ): Unit = {
 
-    import WebPlugin._
+    import SbtWebPlugin._
 
     val timeoutPerSource = 10.seconds
 

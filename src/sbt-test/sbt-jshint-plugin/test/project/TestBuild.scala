@@ -1,8 +1,8 @@
 import sbt._
 
-import com.typesafe.web.sbt.WebPlugin
-import com.typesafe.jse.sbt.JsEnginePlugin
-import com.typesafe.jshint.sbt.JSHintPlugin
+import com.typesafe.sbt.web.SbtWebPlugin
+import com.typesafe.sbt.jse.SbtJsEnginePlugin
+import com.typesafe.sbt.jshint.SbtJSHintPlugin
 import xsbti.Severity
 
 object TestBuild extends Build {
@@ -24,11 +24,11 @@ object TestBuild extends Build {
     base = file("."),
     settings =
       Project.defaultSettings ++
-        WebPlugin.webSettings ++
-        JsEnginePlugin.jsEngineSettings ++
-        JSHintPlugin.jshintSettings ++
+        SbtWebPlugin.webSettings ++
+        SbtJsEnginePlugin.jsEngineSettings ++
+        SbtJSHintPlugin.jshintSettings ++
         Seq(
-          WebPlugin.WebKeys.reporter := TestReporter,
+          SbtWebPlugin.WebKeys.reporter := TestReporter,
           TaskKey[Unit]("check") := {
             val errorCount = TestReporter.count.get(Severity.Error)
             if (errorCount != 2) {
