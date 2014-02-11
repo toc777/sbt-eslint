@@ -14,14 +14,14 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
         "Spray Releases" at "http://repo.spray.io/"
         )
 
-    addSbtPlugin("com.typesafe" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
+    addSbtPlugin("com.typesafe.sbt" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
 
 Then declare the settings required in your build file (JSHintPlugin depends on some other, more generalised settings
 to be defined). For example, for build.sbt:
 
-    import com.typesafe.web.sbt.WebPlugin
-    import com.typesafe.jse.sbt.JsEnginePlugin
-    import com.typesafe.jshint.sbt.JSHintPlugin
+    import com.typesafe.sbt.web.WebPlugin
+    import com.typesafe.sbt.jse.JsEnginePlugin
+    import com.typesafe.sbt.jshint.JSHintPlugin
 
     WebPlugin.webSettings
 
@@ -38,17 +38,4 @@ provide a `.jshintrc` file within your project's base directory. If there is no 
 be search for in your home directory. This behaviour can be overridden by using a `JSHintPlugin.config` setting for the plugin.
 `JSHintPlugin.config` is used to specify the location of a configuration file.
 
-By default [Rhino](https://developer.mozilla.org/en/docs/Rhino) is used as the JavaScript engine and runs entirely within
-the JVM requiring no additional downloads.
-[common-node](http://olegp.github.io/common-node//) is supported as a native engine option for fast and native JavaScript execution.
-common-node is [Node](http://nodejs.org/) with library support for [CommonJS](http://wiki.commonjs.org/wiki/CommonJS).
-To use common-node instead of Rhino declare the following in your build file:
-
-    import com.typesafe.jse.sbt.JsEnginePlugin.JsEngineKeys
-
-    JsEngineKeys.engineType := JsEngineKeys.EngineType.CommonNode
-
-common-node is required to be available on your shell's path in order for it to be used. To check for its availability
-simply type `common-node`.
-
-&copy; Typesafe Inc., 2013  
+&copy; Typesafe Inc., 2013, 2014
