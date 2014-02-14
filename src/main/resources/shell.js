@@ -27,26 +27,34 @@
 
     var options = JSON.parse(args[OPTIONS_ARG]);
 
-    console.log("[");
     var sourceFilePaths = JSON.parse(args[SOURCE_FILE_PATHS_ARG]);
     var sourceFilesToProcess = sourceFilePaths.length;
-    var resultReported = false;
+    var results = [];
+    var problems = [];
     sourceFilePaths.forEach(function (sourceFilePath) {
         fs.readFile(sourceFilePath, "utf8", function (e, source) {
             if (e) {
                 console.error("Error while trying to read " + source, e);
             } else {
-                var status = jshint.JSHINT(source, options);
-                if (resultReported) {
-                    console.log(",");
-                }
-                console.log(JSON.stringify([sourceFilePath, (status === 0 ? [] : jshint.JSHINT.errors)]));
-                resultReported = true;
+                jshint.JSHINT(source, options);
+                results.push({
+                    source: sourceFilePath,
+                    result: (jshint.JSHINT.errors.length === 0 ? {filesRead: [sourceFilePath], filesWritten: []} : null)
+                });
+                jshint.JSHINT.errors.forEach(function (e) {
+                    problems.push({
+                        message: e.reason,
+                        severity: e.id.substring(1, e.id.length - 1),
+                        lineNumber: e.line,
+                        characterOffset: e.character - 1,
+                        lineContent: e.evidence,
+                        source: sourceFilePath
+                    });
+                });
             }
             if (--sourceFilesToProcess === 0) {
-                console.log("]");
+                console.log(JSON.stringify({results: results, problems: problems}));
             }
         });
     });
-
 }());
