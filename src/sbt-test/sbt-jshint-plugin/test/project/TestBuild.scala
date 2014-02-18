@@ -1,7 +1,7 @@
 import sbt._
 
 import com.typesafe.sbt.web.SbtWebPlugin
-import com.typesafe.sbt.jse.SbtJsEnginePlugin
+import com.typesafe.sbt.jse.SbtJsTaskPlugin
 import com.typesafe.sbt.jshint.SbtJSHintPlugin
 import xsbti.Severity
 
@@ -25,7 +25,7 @@ object TestBuild extends Build {
     settings =
       Project.defaultSettings ++
         SbtWebPlugin.webSettings ++
-        SbtJsEnginePlugin.jsEngineSettings ++
+        SbtJsTaskPlugin.jsEngineAndTaskSettings ++
         SbtJSHintPlugin.jshintSettings ++
         Seq(
           SbtWebPlugin.WebKeys.reporter := TestReporter,

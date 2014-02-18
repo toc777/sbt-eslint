@@ -28,9 +28,10 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
   import SbtJsTaskPlugin.JsTaskKeys._
   import JshintKeys._
 
-  def jshintSettings = jsTaskSettings ++ Seq(
+  def jshintSettings = inTask(jshint)(jsTaskSpecificUnscopedSettings) ++ Seq(
 
-    fileInputHasher := OpInputHasher[File](source => OpInputHash.hashString(source + "|" + jshintOptions.value)),
+    shellFile in jshint := "jshint-shell.js",
+    fileInputHasher in jshint := OpInputHasher[File](source => OpInputHash.hashString(source + "|" + jshintOptions.value)),
 
     config := None,
     resolvedConfig := {
@@ -55,8 +56,8 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
         .getOrElse("{}"): String
     },
 
-    jshint in Assets := jsTask(Assets, jsFilter in Assets, jshintOptions, fileInputHasher, "JavaScript linting").value,
-    jshint in TestAssets := jsTask(TestAssets, jsFilter in TestAssets, jshintOptions, fileInputHasher, "JavaScript test linting").value,
+    jshint in Assets := jsTask(jshint, Assets, jsFilter, jshintOptions, fileInputHasher, "JavaScript linting").value,
+    jshint in TestAssets := jsTask(jshint, TestAssets, jsFilter, jshintOptions, fileInputHasher, "JavaScript test linting").value,
     jshint := (jshint in Assets).value,
 
     jsTasks in Assets <+= (jshint in Assets),
