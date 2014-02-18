@@ -53,7 +53,7 @@
                 });
             }
             if (--sourceFilesToProcess === 0) {
-                console.log(JSON.stringify({results: results, problems: problems}));
+                console.log("\u0010" + JSON.stringify({results: results, problems: problems}));
             }
         });
     });
