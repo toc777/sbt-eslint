@@ -7,7 +7,7 @@ import com.typesafe.sbt.web.incremental._
 import sbt.File
 import scala.Some
 import com.typesafe.sbt.jse.SbtJsTaskPlugin
-import com.typesafe.sbt.web.PathMappings
+import com.typesafe.sbt.web.PathMapping
 
 /**
  * The sbt plugin plumbing around the JSHint library.
@@ -16,7 +16,7 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
 
   object JshintKeys {
 
-    val jshint = TaskKey[PathMappings]("jshint", "Perform JavaScript linting.")
+    val jshint = TaskKey[Seq[PathMapping]]("jshint", "Perform JavaScript linting.")
 
     val config = SettingKey[Option[File]]("jshint-config", "The location of a JSHint configuration file.")
     val resolvedConfig = TaskKey[Option[File]]("jshint-resolved-config", "The actual location of a JSHint configuration file if present. If jshint-config is none then the task will seek a .jshintrc in the project folder. If that's not found then .jshintrc will be searched for in the user's home folder. This behaviour is consistent with other JSHint tooling.")
@@ -57,7 +57,7 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
           .getOrElse("{}"): String
       },
 
-      fileInputHasher := OpInputHasher[File](source => OpInputHash.hashString(source + "|" + (jsOptions in jshint).value)),
+      fileInputHasher := OpInputHasher[PathMapping](p => OpInputHash.hashString(p._1.getAbsolutePath + "|" + (jsOptions in jshint).value)),
 
       taskMessage in Assets := "JavaScript linting",
       taskMessage in TestAssets := "JavaScript test linting"
