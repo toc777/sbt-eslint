@@ -3,7 +3,6 @@ package com.typesafe.sbt.jshint
 import sbt._
 import sbt.Keys._
 import com.typesafe.sbt.web.SbtWebPlugin._
-import com.typesafe.sbt.web.incremental._
 import sbt.File
 import scala.Some
 import com.typesafe.sbt.jse.SbtJsTaskPlugin
@@ -30,6 +29,7 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
   val jshintSettings = inTask(jshint)(
 
     jsTaskSpecificUnscopedSettings ++ Seq(
+      moduleName := "jshint",
       shellFile := "jshint-shell.js",
       fileFilter in Assets := (jsFilter in Assets).value,
       fileFilter in TestAssets := (jsFilter in TestAssets).value,
@@ -56,8 +56,6 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
           .map(IO.read(_))
           .getOrElse("{}"): String
       },
-
-      fileInputHasher := OpInputHasher[PathMapping](p => OpInputHash.hashString(p._1.getAbsolutePath + "|" + (jsOptions in jshint).value)),
 
       taskMessage in Assets := "JavaScript linting",
       taskMessage in TestAssets := "JavaScript test linting"

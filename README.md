@@ -10,8 +10,7 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
     resolvers ++= Seq(
         Resolver.url("sbt snapshot plugins", url("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots"))(Resolver.ivyStylePatterns),
         Resolver.sonatypeRepo("snapshots"),
-        "Typesafe Snapshots Repository" at "http://repo.typesafe.com/typesafe/snapshots/",
-        "Spray Releases" at "http://repo.spray.io/"
+        "Typesafe Snapshots Repository" at "http://repo.typesafe.com/typesafe/snapshots/"
         )
 
     addSbtPlugin("com.typesafe.sbt" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
@@ -19,15 +18,15 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
 Then declare the settings required in your build file (JSHintPlugin depends on some other, more generalised settings
 to be defined). For example, for build.sbt:
 
-    import com.typesafe.sbt.web.WebPlugin
-    import com.typesafe.sbt.jse.JsEnginePlugin
-    import com.typesafe.sbt.jshint.JSHintPlugin
+    import com.typesafe.sbt.web.SbtWebPlugin
+    import com.typesafe.sbt.jse.SbtJsEnginePlugin
+    import com.typesafe.sbt.jshint.SbtJSHintPlugin
 
-    WebPlugin.webSettings
+    SbtWebPlugin.webSettings
 
-    JsEnginePlugin.jsEngineSettings
+    SbtJsEnginePlugin.jsEngineSettings
 
-    JSHintPlugin.jshintSettings
+    SbtJSHintPlugin.jshintSettings
 
 By default linting occurs as part of your project's `test` task. Both src/main/assets/\*\*/\*.js and
 src/test/assets/\*\*/\*.js sources are linted.

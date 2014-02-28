@@ -1,4 +1,5 @@
 import sbt._
+import sbt.Keys._
 
 import com.typesafe.sbt.web.SbtWebPlugin
 import com.typesafe.sbt.jse.SbtJsTaskPlugin
@@ -39,7 +40,7 @@ object TestBuild extends Build {
               !messages.contains("Expected an assignment or function call and instead saw an expression.") &&
                 !messages.contains("Missing semicolon.")
             ) {
-              sys.error(messages)
+              sys.error(s"Unexpected messages: $messages")
             }
           }
         )
