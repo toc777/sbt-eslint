@@ -4,21 +4,26 @@ import sbt.Keys._
 import com.typesafe.sbt.web.SbtWebPlugin
 import com.typesafe.sbt.jse.SbtJsTaskPlugin
 import com.typesafe.sbt.jshint.SbtJSHintPlugin
-import xsbti.Severity
 
 object TestBuild extends Build {
 
-  object TestLogger extends Logger {
-    val messages = new StringBuilder()
-
+  class TestLogger(target: File) extends Logger {
     def trace(t: => Throwable): Unit = {}
 
     def success(message: => String): Unit = {}
 
-    def log(level: Level.Value, message: => String): Unit = messages ++= message
+    def log(level: Level.Value, message: => String): Unit = {
+      if (level == Level.Error) {
+        if (message.contains("Expected an assignment or function call and instead saw an expression.")) {
+          IO.touch(target / "expected-assignment-error")
+        } else if (message.contains("Missing semicolon.")) {
+          IO.touch(target / "missing-semi-error")
+        }
+      }
+    }
   }
 
-  object TestReporter extends LoggerReporter(-1, TestLogger)
+  class TestReporter(target: File) extends LoggerReporter(-1, new TestLogger(target))
 
   lazy val root = Project(
     id = "test-build",
@@ -29,20 +34,7 @@ object TestBuild extends Build {
         SbtJsTaskPlugin.jsEngineAndTaskSettings ++
         SbtJSHintPlugin.jshintSettings ++
         Seq(
-          SbtWebPlugin.WebKeys.reporter := TestReporter,
-          TaskKey[Unit]("check") := {
-            val errorCount = TestReporter.count.get(Severity.Error)
-            if (errorCount != 2) {
-              sys.error(s"$errorCount linting errors received when 2 were expected.")
-            }
-            val messages = TestLogger.messages.toString()
-            if (
-              !messages.contains("Expected an assignment or function call and instead saw an expression.") &&
-                !messages.contains("Missing semicolon.")
-            ) {
-              sys.error(s"Unexpected messages: $messages")
-            }
-          }
+          SbtWebPlugin.WebKeys.reporter := new TestReporter(target.value)
         )
   )
 
