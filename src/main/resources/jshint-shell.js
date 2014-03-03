@@ -40,7 +40,7 @@
             } else {
                 jshint.JSHINT(source, options);
                 results.push({
-                    source: sourceFilePath,
+                    source: sourceFile,
                     result: (jshint.JSHINT.errors.length === 0 ? {filesRead: [sourceFile], filesWritten: []} : null)
                 });
                 jshint.JSHINT.errors.forEach(function (e) {
