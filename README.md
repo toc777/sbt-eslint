@@ -1,6 +1,8 @@
 sbt-jshint-plugin
 =================
 
+[![Build Status](https://api.travis-ci.org/sbt/sbt-jshint-plugin.png?branch=master)](https://travis-ci.org/sbt/sbt-jshint-plugin)
+
 Allows JSHint to be used from within sbt. Builds on com.typesafe:js-engine in order to execute jshint.js
 along with the scripts to verify. js-engine enables high performance linting given parallelism and native
 JS engine execution.
