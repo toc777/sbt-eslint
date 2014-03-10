@@ -21,12 +21,12 @@ Then declare the settings required in your build file (JSHintPlugin depends on s
 to be defined). For example, for build.sbt:
 
     import com.typesafe.sbt.web.SbtWebPlugin
-    import com.typesafe.sbt.jse.SbtJsEnginePlugin
+    import com.typesafe.sbt.jse.SbtJsTaskPlugin
     import com.typesafe.sbt.jshint.SbtJSHintPlugin
 
     SbtWebPlugin.webSettings
 
-    SbtJsEnginePlugin.jsEngineSettings
+    SbtJsTaskPlugin.jsEngineAndTaskSettings
 
     SbtJSHintPlugin.jshintSettings
 
