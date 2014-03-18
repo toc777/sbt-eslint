@@ -6,12 +6,13 @@ import com.typesafe.sbt.web.SbtWebPlugin._
 import sbt.File
 import scala.Some
 import com.typesafe.sbt.jse.SbtJsTaskPlugin
-import com.typesafe.sbt.web.PathMapping
 
 /**
  * The sbt plugin plumbing around the JSHint library.
  */
-object SbtJSHintPlugin extends SbtJsTaskPlugin {
+object SbtJSHintPlugin extends AutoPlugin {
+
+  def select = SbtJsTaskPlugin
 
   object JshintKeys {
 
@@ -23,10 +24,11 @@ object SbtJSHintPlugin extends SbtJsTaskPlugin {
   }
 
   import WebKeys._
+  import SbtJsTaskPlugin._
   import SbtJsTaskPlugin.JsTaskKeys._
   import JshintKeys._
 
-  val jshintSettings = Seq(
+  override def projectSettings = Seq(
     config := None,
     resolvedConfig := {
       config.value.orElse {

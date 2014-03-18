@@ -17,19 +17,6 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
 
     addSbtPlugin("com.typesafe.sbt" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
 
-Then declare the settings required in your build file (JSHintPlugin depends on some other, more generalised settings
-to be defined). For example, for build.sbt:
-
-    import com.typesafe.sbt.web.SbtWebPlugin
-    import com.typesafe.sbt.jse.SbtJsTaskPlugin
-    import com.typesafe.sbt.jshint.SbtJSHintPlugin
-
-    SbtWebPlugin.webSettings
-
-    SbtJsTaskPlugin.jsEngineAndTaskSettings
-
-    SbtJSHintPlugin.jshintSettings
-
 By default linting occurs as part of your project's `test` task. Both src/main/assets/\*\*/\*.js and
 src/test/assets/\*\*/\*.js sources are linted.
 
