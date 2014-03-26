@@ -1,7 +1,7 @@
-sbt-jshint-plugin
-=================
+sbt-jshint
+==========
 
-[![Build Status](https://api.travis-ci.org/sbt/sbt-jshint-plugin.png?branch=master)](https://travis-ci.org/sbt/sbt-jshint-plugin)
+[![Build Status](https://api.travis-ci.org/sbt/sbt-jshint.png?branch=master)](https://travis-ci.org/sbt/sbt-jshint)
 
 Allows JSHint to be used from within sbt. Builds on com.typesafe:js-engine in order to execute jshint.js
 along with the scripts to verify. js-engine enables high performance linting given parallelism and native
@@ -15,7 +15,7 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
         "Typesafe Snapshots Repository" at "http://repo.typesafe.com/typesafe/snapshots/"
         )
 
-    addSbtPlugin("com.typesafe.sbt" % "sbt-jshint-plugin" % "1.0.0-SNAPSHOT")
+    addSbtPlugin("com.typesafe.sbt" % "sbt-jshint" % "1.0.0-SNAPSHOT")
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
