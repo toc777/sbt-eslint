@@ -12,7 +12,8 @@ import com.typesafe.sbt.jse.SbtJsTaskPlugin
  */
 object SbtJSHintPlugin extends AutoPlugin {
 
-  def select = SbtJsTaskPlugin
+  override def requires = SbtJsTaskPlugin
+  override def trigger = AllRequirements
 
   object JshintKeys {
 
