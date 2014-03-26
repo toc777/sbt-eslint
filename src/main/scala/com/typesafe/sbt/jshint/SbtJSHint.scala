@@ -2,17 +2,17 @@ package com.typesafe.sbt.jshint
 
 import sbt._
 import sbt.Keys._
-import com.typesafe.sbt.web.SbtWebPlugin._
+import com.typesafe.sbt.web.SbtWeb._
 import sbt.File
 import scala.Some
-import com.typesafe.sbt.jse.SbtJsTaskPlugin
+import com.typesafe.sbt.jse.SbtJsTask
 
 /**
  * The sbt plugin plumbing around the JSHint library.
  */
-object SbtJSHintPlugin extends AutoPlugin {
+object SbtJSHint extends AutoPlugin {
 
-  override def requires = SbtJsTaskPlugin
+  override def requires = SbtJsTask
   override def trigger = AllRequirements
 
   object JshintKeys {
@@ -25,8 +25,8 @@ object SbtJSHintPlugin extends AutoPlugin {
   }
 
   import WebKeys._
-  import SbtJsTaskPlugin._
-  import SbtJsTaskPlugin.JsTaskKeys._
+  import SbtJsTask._
+  import SbtJsTask.JsTaskKeys._
   import JshintKeys._
 
   override def projectSettings = Seq(
