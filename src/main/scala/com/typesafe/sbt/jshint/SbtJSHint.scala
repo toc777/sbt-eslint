@@ -6,14 +6,9 @@ import com.typesafe.sbt.web.SbtWeb._
 import sbt.File
 import scala.Some
 import com.typesafe.sbt.jse.SbtJsTask
+import com.typesafe.sbt.web.SbtWeb
 
-/**
- * The sbt plugin plumbing around the JSHint library.
- */
-object SbtJSHint extends AutoPlugin {
-
-  override def requires = SbtJsTask
-  override def trigger = AllRequirements
+object Import {
 
   object JshintKeys {
 
@@ -24,10 +19,22 @@ object SbtJSHint extends AutoPlugin {
 
   }
 
-  import WebKeys._
-  import SbtJsTask._
-  import SbtJsTask.JsTaskKeys._
-  import JshintKeys._
+}
+
+/**
+ * The sbt plugin plumbing around the JSHint library.
+ */
+object SbtJSHint extends AutoPlugin {
+
+  override def requires = SbtJsTask
+
+  override def trigger = AllRequirements
+
+  val autoImport = Import
+
+  import SbtWeb.autoImport.WebKeys._
+  import SbtJsTask.autoImport.JsTaskKeys._
+  import autoImport.JshintKeys._
 
   override def projectSettings = Seq(
     config := None,
@@ -48,7 +55,7 @@ object SbtJSHint extends AutoPlugin {
       }: Option[File]
     }
   ) ++ inTask(jshint)(
-    jsTaskSpecificUnscopedSettings ++ Seq(
+    SbtJsTask.jsTaskSpecificUnscopedSettings ++ Seq(
       moduleName := "jshint",
       shellFile := "jshint-shell.js",
       fileFilter in Assets := (jsFilter in Assets).value,
@@ -64,6 +71,6 @@ object SbtJSHint extends AutoPlugin {
       taskMessage in TestAssets := "JavaScript test linting"
 
     )
-  ) ++ addJsSourceFileTasks(jshint)
+  ) ++ SbtJsTask.addJsSourceFileTasks(jshint)
 
 }
