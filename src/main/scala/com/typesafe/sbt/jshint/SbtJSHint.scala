@@ -32,7 +32,8 @@ object SbtJSHint extends AutoPlugin {
 
   val autoImport = Import
 
-  import SbtWeb.autoImport.WebKeys._
+  import SbtWeb.autoImport._
+  import WebKeys._
   import SbtJsTask.autoImport.JsTaskKeys._
   import autoImport.JshintKeys._
 

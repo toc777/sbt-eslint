@@ -19,9 +19,7 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
-    import com.typesafe.sbt.web.SbtWeb
-
-    lazy val root = project.in(file(".")).addPlugins(SbtWeb)
+    lazy val root = (project in file(".")).addPlugins(SbtWeb)
 
 By default linting occurs as part of your project's `jshint` task. Both src/main/assets/\*\*/\*.js and
 src/test/assets/\*\*/\*.js sources are linted.
