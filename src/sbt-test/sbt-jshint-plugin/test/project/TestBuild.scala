@@ -13,9 +13,7 @@ object TestBuild extends Build {
 
     def log(level: Level.Value, message: => String): Unit = {
       if (level == Level.Error) {
-        if (message.contains("Expected an assignment or function call and instead saw an expression.")) {
-          IO.touch(target / "expected-assignment-error")
-        } else if (message.contains("Missing semicolon.")) {
+        if (message.contains("Missing semicolon.")) {
           IO.touch(target / "missing-semi-error")
         }
       }

@@ -1,3 +1,3 @@
-var f = "hi"
-
-b = "a"
+function a() {
+    return 1
+}

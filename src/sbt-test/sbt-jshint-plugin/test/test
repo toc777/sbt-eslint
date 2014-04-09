@@ -1,4 +1,6 @@
 # Lint an valid js file and see that linting errors are reported.
 -> assets
-$ exists target/expected-assignment-error
 $ exists target/missing-semi-error
+
+> set JshintKeys.config := Some(file("test.jshintrc"))
+> assets
