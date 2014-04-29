@@ -2,7 +2,6 @@ package com.typesafe.sbt.jshint
 
 import sbt._
 import sbt.Keys._
-import com.typesafe.sbt.web.SbtWeb._
 import sbt.File
 import scala.Some
 import com.typesafe.sbt.jse.SbtJsTask
@@ -58,15 +57,11 @@ object SbtJSHint extends AutoPlugin {
   ) ++ inTask(jshint)(
     SbtJsTask.jsTaskSpecificUnscopedSettings ++ Seq(
       moduleName := "jshint",
-      shellFile := "jshint-shell.js",
-      fileFilter in Assets := (jsFilter in Assets).value,
-      fileFilter in TestAssets := (jsFilter in TestAssets).value,
+      shellFile := getClass.getClassLoader.getResource("jshint-shell.js"),
+      includeFilter in Assets := (jsFilter in Assets).value,
+      includeFilter in TestAssets := (jsFilter in TestAssets).value,
 
-      jsOptions := {
-        resolvedConfig.value
-          .map(IO.read(_))
-          .getOrElse("{}"): String
-      },
+      jsOptions := resolvedConfig.value.fold("{}")(IO.read(_)),
 
       taskMessage in Assets := "JavaScript linting",
       taskMessage in TestAssets := "JavaScript test linting"
