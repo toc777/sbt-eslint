@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "jshint-node" % "2.4.1-1"
 )
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.0.0-RC1")
+addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.0.0-SNAPSHOT")
 
 publishMavenStyle := false
 
