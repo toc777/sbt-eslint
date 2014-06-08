@@ -39,19 +39,23 @@
                 console.error("Error while trying to read " + source, e);
             } else {
                 jshint.JSHINT(source, options);
+                var actualErrors = 0;
+                jshint.JSHINT.errors.forEach(function (e) {
+                    if (e) {
+                        problems.push({
+                            message: e.reason,
+                            severity: (e.id? e.id.substring(1, e.id.length - 1) : "error"),
+                            lineNumber: e.line,
+                            characterOffset: e.character - 1,
+                            lineContent: e.evidence,
+                            source: sourceFile
+                        });
+                        ++actualErrors;
+                    }
+                });
                 results.push({
                     source: sourceFile,
-                    result: (jshint.JSHINT.errors.length === 0 ? {filesRead: [sourceFile], filesWritten: []} : null)
-                });
-                jshint.JSHINT.errors.forEach(function (e) {
-                    problems.push({
-                        message: e.reason,
-                        severity: e.id.substring(1, e.id.length - 1),
-                        lineNumber: e.line,
-                        characterOffset: e.character - 1,
-                        lineContent: e.evidence,
-                        source: sourceFile
-                    });
+                    result: (actualErrors === 0 ? {filesRead: [sourceFile], filesWritten: []} : null)
                 });
             }
             if (--sourceFilesToProcess === 0) {
