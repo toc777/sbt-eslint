@@ -22,11 +22,12 @@
     var console = require("console");
     var fs = require("fs");
     var jshint = require("jshint");
+    var stripJsonComments = require("strip-json-comments");
 
     var SOURCE_FILE_MAPPINGS_ARG = 2;
     var OPTIONS_ARG = 4;
 
-    var options = JSON.parse(args[OPTIONS_ARG]);
+    var options = JSON.parse(stripJsonComments(args[OPTIONS_ARG]));
 
     var sourceFileMappings = JSON.parse(args[SOURCE_FILE_MAPPINGS_ARG]);
     var sourceFilesToProcess = sourceFileMappings.length;
