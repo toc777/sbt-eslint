@@ -17,7 +17,8 @@ resolvers ++= Seq(
     )
 
 libraryDependencies ++= Seq(
-  "org.webjars" % "jshint-node" % "2.4.3"
+  "org.webjars" % "jshint-node" % "2.4.3",
+  "org.webjars" % "strip-json-comments" % "1.0.2-1"
 )
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.0.0")
