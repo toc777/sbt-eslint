@@ -4,7 +4,7 @@ organization := "com.typesafe.sbt"
 
 name := "sbt-jshint"
 
-version := "1.0.3-SNAPSHOT"
+version := "1.0.3"
 
 scalaVersion := "2.10.4"
 
