@@ -28,6 +28,13 @@
     var OPTIONS_ARG = 4;
 
     var options = JSON.parse(stripJsonComments(args[OPTIONS_ARG]));
+    var globals;
+
+    if (options.globals) {
+        globals = options.globals;
+        delete options.globals;
+    }
+
 
     var sourceFileMappings = JSON.parse(args[SOURCE_FILE_MAPPINGS_ARG]);
     var sourceFilesToProcess = sourceFileMappings.length;
@@ -39,7 +46,7 @@
             if (e) {
                 console.error("Error while trying to read " + source, e);
             } else {
-                jshint.JSHINT(source, options);
+                jshint.JSHINT(source, options, globals);
                 var actualErrors = 0;
                 jshint.JSHINT.errors.forEach(function (e) {
                     if (e) {
