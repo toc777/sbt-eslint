@@ -1,7 +1,7 @@
 sbt-eslint
 ==========
 
-[![Build Status](https://api.travis-ci.org/sbt/sbt-eslint.png?branch=master)](https://travis-ci.org/sbt/sbt-eslint)
+[![Build Status](https://api.travis-ci.org/toc777/sbt-eslint.png?branch=master)](https://travis-ci.org/toc777/sbt-eslint)
 
 Allows ESLint to be used from within sbt. Builds on com.typesafe:js-engine in order to execute eslint.js
 along with the scripts to verify. js-engine enables high performance linting given parallelism and native
@@ -9,7 +9,7 @@ JS engine execution.
 
 To use this plugin use the addSbtPlugin command within your project's plugins.sbt (or as a global setting) i.e.:
 
-    addSbtPlugin("com.typesafe.sbt" % "sbt-eslint" % "1.0.0")
+    addSbtPlugin("com.sc.sbt" % "sbt-eslint" % "1.0.0")
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
