@@ -1,7 +1,7 @@
 sbt-eslint
 ==========
 
-[![Build Status](https://api.travis-ci.org/sbt/sbt-jshint.png?branch=master)](https://travis-ci.org/sbt/sbt-jshint)
+[![Build Status](https://api.travis-ci.org/sbt/sbt-eslint.png?branch=master)](https://travis-ci.org/sbt/sbt-eslint)
 
 Allows ESLint to be used from within sbt. Builds on com.typesafe:js-engine in order to execute eslint.js
 along with the scripts to verify. js-engine enables high performance linting given parallelism and native

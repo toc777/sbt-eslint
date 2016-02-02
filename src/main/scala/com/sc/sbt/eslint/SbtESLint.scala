@@ -11,7 +11,7 @@ object Import {
 
   object EslintKeys {
     val eslint = TaskKey[Seq[File]]("eslint", "Perform JavaScript linting.")
-    val config = TaskKey[Option[File]]("eshint-config")
+    val config = TaskKey[Option[File]]("eslint-config")
   }
 
 }
