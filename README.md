@@ -1,4 +1,4 @@
-sbt-jshint
+sbt-eslint
 ==========
 
 [![Build Status](https://api.travis-ci.org/sbt/sbt-jshint.png?branch=master)](https://travis-ci.org/sbt/sbt-jshint)
