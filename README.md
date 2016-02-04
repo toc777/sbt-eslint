@@ -14,8 +14,24 @@ To use this plugin use the addSbtPlugin command within your project's plugins.sb
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
     lazy val root = (project in file(".")).enablePlugins(SbtWeb)
+    
+Install eslint, either globally with npm:
 
-By default linting occurs as part of your project's `eslint` task. Both src/main/assets/\*\*/\*.js and
+```shell
+npm install eslint -g
+```
+
+Or locally in your project with a `package.json` file:
+
+```json
+{
+  "devDependencies": {
+    "eslint": "1.10.3"
+  }
+}
+```
+
+By default linting occurs at compile time as part of your project's `eslint` task. Both src/main/assets/\*\*/\*.js and
 src/test/assets/\*\*/\*.js sources are linted.
 
 Options can be specified in accordance with the

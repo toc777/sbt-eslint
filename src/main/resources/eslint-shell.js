@@ -20,6 +20,7 @@
     
     var console = require("console");
     var CLIEngine = require("eslint").CLIEngine;
+    var fs = require('fs');
 
     var args = process.argv, 
         options = JSON.parse(args[4]), 
@@ -31,15 +32,19 @@
     var report = cli.executeOnFiles(sourceFileMappings.map(m => m[0]));
     
     report.results.forEach(result => {
-        result.messages.forEach(message => {
-            results.push({
-                source: result.filePath,
-                result: (result.errorCount === 0 ? {filesRead: [result.filePath], filesWritten: []} : null)
-            });
+        if(result.output) {
+            fs.writeFileSync(result.filePath, result.output);
+        }
+        
+        results.push({
+            source: result.filePath,
+            result: (result.errorCount === 0 && result.warningCount === 0 ? {filesRead: [result.filePath], filesWritten: result.output ? [result.filePath] : []} : null)
+        });
             
+        result.messages.forEach(message => {
             problems.push({
                 message: message.message,
-                severity: (message.severity === 1 ? "error" : "warning"),
+                severity: (message.severity === 2 ? "error" : "warn"),
                 lineNumber: message.line,
                 characterOffset: message.column,
                 lineContent: message.source,
@@ -47,6 +52,6 @@
             });
         });
     });
-    
+
     console.log("\u0010" + JSON.stringify({results: results, problems: problems}));
 }());

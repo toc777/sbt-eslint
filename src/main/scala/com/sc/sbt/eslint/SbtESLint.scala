@@ -32,6 +32,7 @@ object SbtESLint extends AutoPlugin {
   import autoImport.EslintKeys._
 
   override def projectSettings = Seq(
+    (compile in Compile) <<= (compile in Compile) dependsOn (eslint),
     config := Some(baseDirectory.value / ".eslintrc")
   ) ++ inTask(eslint)(
     SbtJsTask.jsTaskSpecificUnscopedSettings ++ Seq(
