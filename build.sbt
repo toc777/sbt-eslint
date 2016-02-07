@@ -11,7 +11,7 @@ scriptedSettings
 scriptedLaunchOpts <+= version apply { v => s"-Dproject.version=$v" }
 
 lazy val commonSettings = Seq(
-  version in ThisBuild := "1.0.0",
+  version in ThisBuild := "1.0.1",
   organization in ThisBuild := "com.sc.sbt"
 )
 
