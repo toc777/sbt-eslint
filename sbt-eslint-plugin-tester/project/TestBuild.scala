@@ -9,11 +9,14 @@ object TestBuild extends Build {
   class TestLogger(target: File) extends Logger {
     def trace(t: => Throwable): Unit = {}
 
-    def success(message: => String): Unit = {}
+    def success(message: => String): Unit = {
+      println( message )
+    }
 
     def log(level: Level.Value, message: => String): Unit = {
+      println( message )
       if (level == Level.Error) {
-        if (message.contains("Missing semicolon.")) {
+        if (message.contains("Missing semicolon")) {
           IO.touch(target / "missing-semi-error")
         }
       }

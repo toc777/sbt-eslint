@@ -9,7 +9,7 @@ JS engine execution.
 
 To use this plugin use the addSbtPlugin command within your project's plugins.sbt (or as a global setting) i.e.:
 
-    addSbtPlugin("com.sc.sbt" % "sbt-eslint" % "1.0.0")
+    addSbtPlugin("com.sc.sbt" % "sbt-eslint" % "1.0.2")
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
@@ -26,7 +26,7 @@ Or locally in your project with a `package.json` file:
 ```json
 {
   "devDependencies": {
-    "eslint": "1.10.3"
+    "eslint": "4.9.0"
   }
 }
 ```
