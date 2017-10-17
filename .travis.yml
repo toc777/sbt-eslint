@@ -1,3 +1,3 @@
-jdk: openjdk
+jdk: openjdk8
 language: scala
 script: sbt ^scripted
