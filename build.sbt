@@ -3,9 +3,7 @@ resolvers += Resolver.typesafeRepo("releases")
 
 addSbtJsEngine("1.2.2")
 
-lazy val commonSettings = Seq(
-  organization in ThisBuild := "com.sc.sbt"
-)
+organization := "com.sc.sbt"
 
 lazy val root = (project in file(".")).
   settings(

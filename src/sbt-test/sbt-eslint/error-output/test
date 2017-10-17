@@ -1,0 +1,6 @@
+# Lint a valid js file and see that linting errors are reported.
+> clean
+-> assets
+> errorExists    some.js 2 14
+> errorMsg       some.js Missing semicolon.
+> errorContents  some.js return 1
