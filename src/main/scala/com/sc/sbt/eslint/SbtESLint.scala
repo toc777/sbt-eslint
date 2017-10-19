@@ -70,8 +70,7 @@ object SbtESLint extends AutoPlugin {
     )
   ) ++ SbtJsTask.addJsSourceFileTasks(eslint) ++ Seq(
     eslint in Assets := (eslint in Assets).dependsOn(nodeModules in Assets).value,
-    eslint in TestAssets := (eslint in TestAssets).dependsOn(nodeModules in TestAssets).value,
-    nodeModuleDirectories in Plugin += baseDirectory.value / "node_modules"
+    eslint in TestAssets := (eslint in TestAssets).dependsOn(nodeModules in TestAssets).value
   )
 
 }
