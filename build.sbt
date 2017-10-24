@@ -6,6 +6,8 @@ addSbtWeb("1.4.3")
 
 organization := "com.sc.sbt"
 
+name := "sbt-eslint"
+
 lazy val root = (project in file(".")).
   settings(
     sbtPlugin := true,
